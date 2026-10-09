@@ -1,0 +1,9 @@
+Caelestia bar style for Ryoku.
+
+Upstream: https://github.com/caelestia-dots/shell (soramanew), GPL-3.0; see LICENSE.
+
+cae/ is Caelestia's own QML (bar, popouts, dashboard, launcher, session menu,
+notification sidebar, Nexus settings), vendored by ../vendor-caelestia.py with
+its imports rewritten. cae-adapters/ back Caelestia's Colours, Weather, Players
+and Notifs services with Ryoku's; cae-extras/ adds the dashboard AI usage tab.
+Scene.qml hosts it all as a Ryoku bar style.

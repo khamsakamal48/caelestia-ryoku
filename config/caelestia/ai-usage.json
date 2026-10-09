@@ -1,0 +1,8 @@
+{
+    "showCountdown": true,
+    "showDaily": true,
+    "showSession": true,
+    "showTab": true,
+    "showWeekly": true,
+    "warnThreshold": 80
+}

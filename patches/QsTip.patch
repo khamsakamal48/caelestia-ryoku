@@ -1,0 +1,20 @@
+--- a/quickshell/shell/modules/bar/framebars/menus/QsTip.qml
++++ b/quickshell/shell/modules/bar/framebars/menus/QsTip.qml
+@@ -13,6 +13,8 @@
+     property bool below: false
+     // side: true opens the bubble to the RIGHT, vertically centred; wins over below.
+     property bool side: false
++    // with side: opens to the LEFT instead (a rail on the panel's right edge).
++    property bool sideLeft: false
+     // "center" (default), "left" or "right": the button edge the bubble pins to.
+     property string align: "center"
+ 
+@@ -36,7 +38,7 @@
+ 
+         readonly property real gap: root.showing ? 8 : 4
+ 
+-        x: root.side ? parent.width + gap
++        x: root.side ? (root.sideLeft ? -width - gap : parent.width + gap)
+             : root.align === "right" ? parent.width - width
+             : root.align === "left" ? 0
+             : (parent.width - width) / 2

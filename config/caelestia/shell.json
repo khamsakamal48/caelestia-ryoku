@@ -1,0 +1,63 @@
+{
+    "bar": {
+        "activeWindow": {
+            "compact": true,
+            "inverted": true
+        },
+        "clock": {
+            "background": true,
+            "showDate": true
+        },
+        "scrollActions": {
+            "volume": true
+        },
+        "statusIcons": [
+            {
+                "enabled": false,
+                "id": "lockStatus"
+            },
+            {
+                "enabled": false,
+                "id": "audio"
+            },
+            {
+                "enabled": false,
+                "id": "microphone"
+            },
+            {
+                "enabled": false,
+                "id": "kbLayout"
+            },
+            {
+                "enabled": true,
+                "id": "network"
+            },
+            {
+                "enabled": true,
+                "id": "bluetooth"
+            },
+            {
+                "enabled": true,
+                "id": "battery"
+            }
+        ],
+        "tray": {
+            "compact": false,
+            "recolour": true
+        },
+        "workspaces": {
+            "occupiedBg": false
+        }
+    },
+    "dashboard": {
+        "performance": {
+            "showGpu": false
+        }
+    },
+    "launcher": {
+        "showOnHover": true,
+        "useFuzzy": {
+            "apps": true
+        }
+    }
+}

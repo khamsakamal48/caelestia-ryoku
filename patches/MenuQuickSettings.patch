@@ -1,0 +1,29 @@
+--- a/quickshell/shell/modules/bar/framebars/menus/MenuQuickSettings.qml
++++ b/quickshell/shell/modules/bar/framebars/menus/MenuQuickSettings.qml
+@@ -16,6 +16,8 @@
+     property real avail: 0
+     property string initialPage: ""
+     signal requestClose()
++    // The module rail sits on the panel's outer edge: right for a right-anchored panel.
++    property bool railOnRight: ((Config.normalizedFrameBars.menus || {})["quick-settings"] || {}).anchor === "right"
+ 
+     implicitHeight: root.avail > 0 ? root.avail : 480
+ 
+@@ -264,6 +266,8 @@
+         QsTabRail {
+             id: rail
+             z: 10
++            x: root.railOnRight ? parent.width - width : 0
++            onRight: root.railOnRight
+             height: parent.height
+             modules: root.configuredModules
+             activeModule: root.activeModule
+@@ -273,7 +277,7 @@
+ 
+         Item {
+             id: contentPane
+-            x: rail.implicitWidth
++            x: root.railOnRight ? 0 : rail.implicitWidth
+             width: parent.width - rail.implicitWidth
+             height: parent.height
+             clip: true
