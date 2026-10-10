@@ -120,6 +120,11 @@ PATCHES = [
      "                if (command.length === 1 && ryoku)\n                    R.SessionActions.run(ryoku);\n"
      "                else if (command.join(\" \") === \"caelestia shell nexus open\")\n                    WindowFactory.create();\n"
      "                else if (!SessionManager.exec(command))\n                    Quickshell.execDetached(command);"),
+    # Utilities (Panels sub-page 5) is cut below, so the taskbar component sub-pages
+    # after it each move up one index. Ascending order keeps each match unique.
+    *(("modules/nexus/pages/panels/TaskbarPanel.qml",
+       f"onClicked: root.nState.openSubPage({i})", f"onClicked: root.nState.openSubPage({i - 1})")
+      for i in range(6, 11)),
     # Ryoku's quick-settings panel, hosted as a right-edge drawer by Scene.qml.
     ("components/ScreenState.qml",
      "    property bool sidebar\n",
@@ -188,7 +193,7 @@ NEXUS_CUTS = [
     ("modules/nexus/PageRegistry.qml", 'label: Tr.tr("Plugins")', 8, None),
     ("modules/nexus/PageCompRegistry.qml", "PlaceholderComp {}", 8, None),
     ("modules/nexus/PageCompRegistry.qml", "PlaceholderComp {}", 8, None),
-    # Caelestia's utilities panel (and its toasts) is not ported; Utilities is the last sub-page.
+    # Caelestia's utilities panel (and its toasts) is not ported; TaskbarPanel's sub-page indices are shifted to match.
     ("modules/nexus/pages/PanelsPage.qml", 'text: Tr.tr("Utilities")', 8, None),
     ("modules/nexus/PageCompRegistry.qml", "UtilitiesPanel {}", 16, None),
     # Weather location and units are Ryoku's (its weather daemon).
