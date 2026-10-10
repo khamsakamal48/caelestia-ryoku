@@ -9,6 +9,7 @@ singleton Nmcli Nmcli.qml
 NotifData NotifData.qml
 singleton Notifs Notifs.qml
 singleton Players Players.qml
+singleton QuickSettings QuickSettings.qml
 singleton Screens Screens.qml
 singleton ShellState ShellState.qml
 singleton Time Time.qml

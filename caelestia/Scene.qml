@@ -153,6 +153,8 @@ Scope {
             function onQuicksettingsChanged() {
                 if (win.screenState.quicksettings)
                     win.screenState.sidebar = false;
+                else
+                    interactions.quickSettingsHoverOpened = false;
             }
         }
 
@@ -259,9 +261,14 @@ Scope {
 
         // Caelestia's drawers/Interactions, for the panels carried here: bar
         // popouts on hover, scroll actions on the bar, the dashboard from the
-        // top edge. Panels and bar are its children so their hover counts.
+        // top edge, quick settings from the right edge. Panels and bar are its
+        // children so their hover counts.
         MouseArea {
             id: interactions
+
+            // Quick settings opened by hovering the right edge closes when the
+            // cursor leaves it; opened by its keybind, it stays.
+            property bool quickSettingsHoverOpened
 
             function withinPanelWidth(panel: Item, x: real): bool {
                 const panelX = bar.implicitWidth + panel.x;
@@ -287,6 +294,11 @@ Scope {
                 return x < bar.implicitWidth + panel.x + panel.width && withinPanelHeight(panel, y);
             }
 
+            function inRightPanel(panel: Item, x: real, y: real): bool {
+                const panelWidth = panel.width * (1 - (panel.offsetScale ?? 0));
+                return x > width - Math.max(win.contentItem.CC.Config.border.minThickness, win.borderThickness + panelWidth) && withinPanelHeight(panel, y);
+            }
+
             function trayMenuOpen(): bool {
                 return win.popouts.currentName.startsWith("traymenu") && ((win.popouts.current as StackView)?.depth ?? 0) > 1;
             }
@@ -304,6 +316,8 @@ Scope {
                 if (containsMouse)
                     return;
                 win.screenState.dashboard = false;
+                if (quickSettingsHoverOpened)
+                    win.screenState.quicksettings = false;
                 if (!trayMenuOpen()) {
                     win.popouts.hasCurrent = false;
                     bar.closeTray();
@@ -321,6 +335,15 @@ Scope {
 
                 if (win.contentItem.CC.Config.launcher.showOnHover && !win.screenState.launcher && inBottomPanel(launcher, x, y))
                     win.screenState.launcher = true;
+
+                // The right edge belongs to the sidebar while it is open.
+                const inQuickSettings = inRightPanel(quickSettings, x, y);
+                if (Cae.QuickSettings.settings.showOnHover && inQuickSettings && !win.screenState.quicksettings && !win.screenState.sidebar) {
+                    win.screenState.quicksettings = true;
+                    quickSettingsHoverOpened = true;
+                } else if (quickSettingsHoverOpened && !inQuickSettings) {
+                    win.screenState.quicksettings = false;
+                }
 
                 if (x < bar.implicitWidth) {
                     bar.checkPopout(y);

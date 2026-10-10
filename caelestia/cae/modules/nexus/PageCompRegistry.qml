@@ -112,6 +112,11 @@ QtObject {
                 Component {
                     BarClock {}
                 }
+
+                // Ryoku quick-settings drawer
+                Component {
+                    QuickSettingsPanel {}
+                }
             }
         },
         Component {

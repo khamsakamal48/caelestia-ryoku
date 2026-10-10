@@ -48,6 +48,7 @@ It asks for your sudo password once. Re-running it is safe: use it to update, or
 - **Dashboard**: media (with lyrics), performance, weather, calendar, plus a new **AI usage** tab (Claude Code plan limits and daily tokens, fed by Ryoku's `ryoku-ai-usage` collector; toggle it in Nexus > Panels > Dashboard).
 - **Lyrics for browser/YouTube tracks**: when Caelestia's lookup fails on messy metadata (channel name as artist, full video title), a cleaned-title LRCLIB search finds the synced lyrics; matches are cached in `~/.local/state/caelestia/lyrics_match.json`.
 - **Launcher**: Caelestia's launcher with apps, calculator and actions. Wallpaper, scheme and variant pickers are removed (Ryoku owns those); session actions go through Ryoku; "Settings" opens Nexus.
+- **Quick settings drawer**: Ryoku's quick settings slide out of the right border on `SUPER + Escape`, or when the cursor reaches the right screen edge (closing again when it leaves). Turn the hover off in Nexus > Panels > Quick settings; it is stored in `~/.config/caelestia/quick-settings.json`.
 - **Session menu**: logout/shutdown/reboot go through Ryoku's session daemon; hibernate stays Caelestia's.
 - **Notification sidebar**: mirrors Ryoku's notification server (no second server); Do Not Disturb is Ryoku's. Popups stay Ryoku's.
 - **Nexus settings**: trimmed of pages that do nothing on Ryoku (wallpaper & style, updates/plugins placeholders, utilities panel, weather location, colour engine, popup/toast settings). Its audio/bluetooth/network buttons open Ryoku's panels.
