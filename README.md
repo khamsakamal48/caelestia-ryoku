@@ -24,7 +24,8 @@ It asks for your sudo password once. Re-running it is safe: use it to update, or
 
 1. **Packages**
    - Repo: `cmake ninja base-devel git patch qt6-shadertools qt6-imageformats aubio libpipewire libqalculate ddcutil brightnessctl lm_sensors networkmanager power-profiles-daemon swappy fish ttf-material-symbols-variable ttf-cascadia-code-nerd`
-   - AUR (via `yay`, bootstrapped if missing): `qt6-m3shapes-git libcava ttf-google-sans-flex-variable ttf-rubik-vf`
+   - AUR (via `yay`, bootstrapped if missing): `qt6-m3shapes-git libcava ttf-rubik-vf`
+   - Google Sans Flex, downloaded from google/fonts into `~/.local/share/fonts` (its AUR package points at a file Google renamed)
 2. **Caelestia C++ plugin**: clones `caelestia-dots/shell` at the pinned commit the QML was vendored from, builds it with `-DENABLE_MODULES=plugin`, and installs it to `/usr/lib/qt6/qml/Caelestia`. It rebuilds automatically on re-run when Qt has been updated.
 3. **Quick settings drawer**: patches Ryoku's quick-settings panel (as `user_edits` forks, regenerated from the shipped files) so its module rail sits on the right edge, and anchors the panel to the right.
 4. **Keybinds**: moves Ryoku's launcher to `SUPER + SHIFT + Space` (a Ryoku Settings rebind) and adds a marked block to `~/.config/hypr/user.lua`:

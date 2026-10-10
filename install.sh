@@ -55,7 +55,20 @@ if ! command -v yay >/dev/null; then
 fi
 step "Installing AUR packages"
 yay -S --needed --noconfirm --answerdiff None --answerclean None --removemake \
-    qt6-m3shapes-git libcava ttf-google-sans-flex-variable ttf-rubik-vf
+    qt6-m3shapes-git libcava ttf-rubik-vf
+
+# Google Sans Flex straight from google/fonts: the AUR package pins a file name
+# Google has since renamed, so look the current .ttf up instead.
+if [[ -z $(fc-list 'Google Sans Flex') ]]; then
+    step "Installing Google Sans Flex"
+    url=$(curl -fsSL https://api.github.com/repos/google/fonts/contents/ofl/googlesansflex \
+        | python3 -Ic 'import json,sys; print(next(f["download_url"] for f in json.load(sys.stdin) if f["name"].endswith(".ttf")))') \
+        || die "could not find Google Sans Flex in google/fonts"
+    fonts=${XDG_DATA_HOME:-$HOME/.local/share}/fonts
+    mkdir -p "$fonts"
+    curl -fsSLg -o "$fonts/GoogleSansFlex.ttf" "$url" || die "could not download Google Sans Flex"
+    fc-cache -f "$fonts"
+fi
 
 # --- 2. Caelestia C++ plugin (Caelestia.* QML modules) ---------------------
 # Rebuilt whenever the pinned commit or Qt changes; a Qt update breaks it.
@@ -72,7 +85,7 @@ if [[ $REBUILD == 1 || ! -f /usr/lib/qt6/qml/Caelestia/qmldir || "$(cat "$stamp_
     git -C "$src" checkout --quiet --force "$CAELESTIA_REV"
     rm -rf "$src/build"
     cmake -S "$src" -B "$src/build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
-        -DENABLE_MODULES=plugin -DVERSION="$(git -C "$src" show -s --format=%cs HEAD)" -DGIT_REVISION="$CAELESTIA_REV"
+        -DENABLE_MODULES=plugin -DGIT_REVISION="$CAELESTIA_REV"
     cmake --build "$src/build"
     sudo cmake --install "$src/build"
     mkdir -p "${stamp_file%/*}"
