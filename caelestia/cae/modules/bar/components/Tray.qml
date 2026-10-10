@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import Quickshell.Services.SystemTray
+import shell.services as R
 import Caelestia.Config
 import "../../../components"
 import "../../../services"
@@ -70,7 +70,7 @@ StyledRect {
             id: items
 
             model: ScriptModel {
-                values: SystemTray.items.values.filter(i => i.status !== Status.Passive && !GlobalConfig.bar.tray.hiddenIcons.includes(i.id))
+                values: R.Tray.items.filter(i => i.status !== "Passive" && !GlobalConfig.bar.tray.hiddenIcons.includes(i.id)).map(i => i.service)
             }
 
             TrayItem {}

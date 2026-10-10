@@ -6,19 +6,47 @@ import Quickshell
 import Quickshell.Widgets
 import Caelestia.Config
 import Caelestia.I18n
+import shell.services as R
 import "../../../components"
 import "../../../services"
+
+// Caelestia's tray menu, drawn from the dbusmenu tree that Ryoku's tray daemon
+// publishes (R.Tray) instead of Quickshell's SystemTray. Each level holds a menu
+// id and re-reads the live tree, so a republish (e.g. aboutToShow filling a lazy
+// submenu) re-renders it.
 StackView {
     id: root
 
     required property PopoutState popouts
-    required property QsMenuHandle trayItem
+    required property string service
+
+    readonly property var menu: R.Tray.items.find(i => i.service === service)?.menu ?? null
+
+    function findNode(node: var, id: int): var {
+        if (!node)
+            return null;
+        if (node.id === id)
+            return node;
+        for (const c of node.children ?? []) {
+            const found = findNode(c, id);
+            if (found)
+                return found;
+        }
+        return null;
+    }
+
+    // dbusmenu labels carry '_' accelerators; show the plain text.
+    function cleanLabel(s: var): string {
+        return String(s ?? "").replace(/_([^_])/g, "$1").replace(/__/g, "_");
+    }
 
     implicitWidth: (currentItem as SubMenu)?.hasChildren ? currentItem.implicitWidth : -Tokens.padding.large * 2
     implicitHeight: (currentItem as SubMenu)?.hasChildren ? currentItem.implicitHeight : -Tokens.padding.large * 2
 
+    Component.onCompleted: R.Tray.aboutToShow(service)
+
     initialItem: SubMenu {
-        handle: root.trayItem
+        nodeId: root.menu?.id ?? 0
     }
 
     pushEnter: NoAnim {}
@@ -41,8 +69,9 @@ StackView {
     component SubMenu: Column {
         id: menu
 
-        required property QsMenuHandle handle
-        readonly property bool hasChildren: menuOpener.children.values.some(e => !e.isSeparator)
+        required property int nodeId
+        readonly property var entries: (root.findNode(root.menu, nodeId)?.children ?? []).filter(e => e.visible !== false)
+        readonly property bool hasChildren: entries.some(e => e.type !== "separator")
         property bool isSubMenu
         property bool shown
 
@@ -67,25 +96,23 @@ StackView {
             Anim {}
         }
 
-        QsMenuOpener {
-            id: menuOpener
-
-            menu: menu.handle
-        }
-
         Repeater {
-            model: menuOpener.children
+            model: menu.entries
 
             StyledRect {
                 id: item
 
-                required property QsMenuEntry modelData
+                required property var modelData
+                readonly property bool isSeparator: modelData.type === "separator"
+                readonly property bool entryEnabled: modelData.enabled !== false
+                readonly property bool entryHasChildren: (modelData.children?.length ?? 0) > 0
+                readonly property string entryIcon: modelData.iconName ? Quickshell.iconPath(modelData.iconName, true) : ""
 
                 implicitWidth: Tokens.sizes.bar.trayMenuWidth
-                implicitHeight: modelData.isSeparator ? 1 : children.implicitHeight
+                implicitHeight: isSeparator ? 1 : children.implicitHeight
 
                 radius: Tokens.rounding.full
-                color: modelData.isSeparator ? Colours.palette.m3outlineVariant : "transparent"
+                color: isSeparator ? Colours.palette.m3outlineVariant : "transparent"
 
                 Loader {
                     id: children
@@ -94,7 +121,7 @@ StackView {
                     anchors.left: parent.left
                     anchors.right: parent.right
 
-                    active: !item.modelData.isSeparator
+                    active: !item.isSeparator
 
                     sourceComponent: Item {
                         implicitHeight: label.implicitHeight
@@ -105,17 +132,16 @@ StackView {
                             anchors.rightMargin: -Tokens.padding.small
 
                             radius: item.radius
-                            disabled: !item.modelData.enabled
+                            disabled: !item.entryEnabled
 
                             onClicked: {
-                                const entry = item.modelData;
-                                if (entry.hasChildren)
+                                if (item.entryHasChildren)
                                     root.push(subMenuComp.createObject(null, {
-                                        handle: entry,
+                                        nodeId: item.modelData.id,
                                         isSubMenu: true
                                     }));
                                 else {
-                                    item.modelData.triggered();
+                                    R.Tray.menuEvent(root.service, item.modelData.id);
                                     root.popouts.hasCurrent = false;
                                 }
                             }
@@ -127,13 +153,13 @@ StackView {
                             asynchronous: true
                             anchors.left: parent.left
 
-                            active: item.modelData.icon !== ""
+                            active: item.entryIcon !== ""
 
                             sourceComponent: IconImage {
                                 asynchronous: true
                                 implicitSize: label.implicitHeight
 
-                                source: item.modelData.icon
+                                source: item.entryIcon
                             }
                         }
 
@@ -144,13 +170,13 @@ StackView {
                             anchors.leftMargin: icon.active ? Tokens.spacing.medium : 0
 
                             text: labelMetrics.elidedText
-                            color: item.modelData.enabled ? Colours.palette.m3onSurface : Colours.palette.m3outline
+                            color: item.entryEnabled ? Colours.palette.m3onSurface : Colours.palette.m3outline
                         }
 
                         TextMetrics {
                             id: labelMetrics
 
-                            text: item.modelData.text
+                            text: root.cleanLabel(item.modelData.label)
                             font: label.font
 
                             elide: Text.ElideRight
@@ -164,11 +190,11 @@ StackView {
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.right: parent.right
 
-                            active: item.modelData.hasChildren
+                            active: item.entryHasChildren
 
                             sourceComponent: MaterialIcon {
                                 text: "chevron_right"
-                                color: item.modelData.enabled ? Colours.palette.m3onSurface : Colours.palette.m3outline
+                                color: item.entryEnabled ? Colours.palette.m3onSurface : Colours.palette.m3outline
                             }
                         }
                     }

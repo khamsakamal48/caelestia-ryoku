@@ -5,9 +5,9 @@ Battery Battery.qml
 Bluetooth Bluetooth.qml
 ClipWrapper ClipWrapper.qml
 Content Content.qml
+DaemonTrayMenu DaemonTrayMenu.qml
 LockStatus LockStatus.qml
 Network Network.qml
 PopoutState PopoutState.qml
-TrayMenu TrayMenu.qml
 WirelessPassword WirelessPassword.qml
 Wrapper Wrapper.qml

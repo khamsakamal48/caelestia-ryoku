@@ -41,6 +41,8 @@ EXCLUDE = {
     "modules/nexus/pages/wallandstyle/ColourSelect.qml",
     "modules/nexus/pages/wallandstyle/WallpaperCategory.qml",
     "modules/nexus/pages/wallandstyle/WallpaperSelect.qml",
+    # Drawn from Ryoku's tray daemon instead (cae-extras/modules/bar/popouts/DaemonTrayMenu.qml).
+    "modules/bar/popouts/TrayMenu.qml",
 }
 ASSETS = ["bongocat.gif", "logo.svg", "kurukuru.gif"]
 
@@ -125,6 +127,39 @@ PATCHES = [
     *(("modules/nexus/pages/panels/TaskbarPanel.qml",
        f"onClicked: root.nState.openSubPage({i})", f"onClicked: root.nState.openSubPage({i - 1})")
       for i in range(6, 11)),
+    # Tray: Ryoku's daemon (R.Tray) is the StatusNotifier host, not Quickshell's SystemTray.
+    # Its watcher announces items as ":1.x" but withdraws them as ":1.x/StatusNotifierItem",
+    # which Quickshell's host never matches, so quit apps left stale icons. Models hold
+    # item services; delegates look the live item up, so a republish updates in place.
+    ("modules/bar/components/Tray.qml", "import Quickshell.Services.SystemTray\n", "import shell.services as R\n"),
+    ("modules/bar/components/Tray.qml",
+     "values: SystemTray.items.values.filter(i => i.status !== Status.Passive && !GlobalConfig.bar.tray.hiddenIcons.includes(i.id))",
+     'values: R.Tray.items.filter(i => i.status !== "Passive" && !GlobalConfig.bar.tray.hiddenIcons.includes(i.id)).map(i => i.service)'),
+    ("modules/bar/components/TrayItem.qml", "import Quickshell.Services.SystemTray\n", "import Quickshell\nimport shell.services as R\n"),
+    ("modules/bar/components/TrayItem.qml",
+     "    required property SystemTrayItem modelData\n",
+     "    required property string modelData // the item's service\n"
+     "    readonly property var item: R.Tray.items.find(i => i.service === modelData) ?? null\n"),
+    ("modules/bar/components/TrayItem.qml",
+     "            modelData.activate();\n        else\n            modelData.secondaryActivate();",
+     "            R.Tray.activate(root.modelData);\n        else\n"
+     "            R.Tray.send(\"tray.secondaryActivate\", {\n                service: root.modelData\n            });"),
+    ("modules/bar/components/TrayItem.qml",
+     "Icons.getTrayIcon(root.modelData.id, root.modelData.icon)",
+     "Icons.getTrayIcon(root.item?.id ?? \"\", root.item?.iconPath ? `file://${root.item.iconPath}` : Quickshell.iconPath(root.item?.iconName ?? \"\", true))"),
+    ("modules/bar/popouts/Content.qml", "import Quickshell.Services.SystemTray\n", "import shell.services as R\n"),
+    ("modules/bar/popouts/Content.qml",
+     "SystemTray.items.values.filter(i => i.status !== Status.Passive && !GlobalConfig.bar.tray.hiddenIcons.includes(i.id)).reduce((acc, item, i) => {\n        acc[item.id] = i;",
+     "R.Tray.items.filter(i => i.status !== \"Passive\" && !GlobalConfig.bar.tray.hiddenIcons.includes(i.id)).reduce((acc, item, i) => {\n        acc[item.service] = i;"),
+    ("modules/bar/popouts/Content.qml",
+     "values: SystemTray.items.values.filter(i => i.hasMenu && i.status !== Status.Passive && !GlobalConfig.bar.tray.hiddenIcons.includes(i.id))",
+     "values: R.Tray.items.filter(i => (i.menu?.children?.length ?? 0) > 0 && i.status !== \"Passive\" && !GlobalConfig.bar.tray.hiddenIcons.includes(i.id)).map(i => i.service)"),
+    ("modules/bar/popouts/Content.qml",
+     "                required property SystemTrayItem modelData\n\n                name: `traymenu${root.trayItemsToIndices[modelData.id]}`",
+     "                required property string modelData // the item's service\n\n                name: `traymenu${root.trayItemsToIndices[modelData]}`"),
+    ("modules/bar/popouts/Content.qml",
+     "                    TrayMenu {\n                        popouts: root.popouts\n                        trayItem: trayMenu.modelData.menu // qmllint disable unresolved-type\n",
+     "                    DaemonTrayMenu {\n                        popouts: root.popouts\n                        service: trayMenu.modelData\n"),
     # Ryoku's quick-settings panel, hosted as a right-edge drawer by Scene.qml.
     ("components/ScreenState.qml",
      "    property bool sidebar\n",

@@ -2,7 +2,7 @@
 
 [Caelestia shell](https://github.com/caelestia-dots/shell) running on **Ryoku OS**, as a native Ryoku bar style.
 
-Caelestia's real bar, dashboard, launcher, session menu, notification sidebar and Nexus settings app, adapted to Ryoku's own services. Ryoku keeps doing the things it already owns: colours/theme (Matugen), wallpaper, weather, notification popups and session actions. One script installs everything.
+Caelestia's real bar, dashboard, launcher, session menu, notification sidebar and Nexus settings app, adapted to Ryoku's own services. Ryoku keeps doing the things it already owns: colours/theme (Matugen), wallpaper, weather, notification popups, the system tray and session actions. One script installs everything.
 
 ## Why not just install Caelestia?
 
