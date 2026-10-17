@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Ryoku's ryoku-clamshell with one policy change: on AC the laptop stays awake
+# with the lid shut even with no external display (headless use over VNC).
+# Stock policy wants AC *and* an external display; otherwise every close path
+# (the lid bind, `lid sync` on each config reload, the daemon) runs the
+# lock-and-suspend transaction, which re-locks every ~2s after a VNC unlock.
+# On battery, or when AC is unplugged with the lid shut, it still securely
+# locks and suspends. Delete this file and
+# ~/.config/systemd/user/ryoku-clamshell.service.d/ac-awake.conf to undo.
+
+# The shipped script only dispatches when executed, not when sourced.
+source /usr/bin/ryoku-clamshell
+
+clamshell_wanted() { on_ac; }
+
+# Hand the panel off only when there is a display to hand it to. Shutting off
+# eDP-1 with nothing else connected leaves Hyprland with zero outputs: wayvnc
+# loses the output it captures and exits, apps lose their surfaces' output, and
+# reopening re-adds the panel at an autoscaled (wrong) scale.
+eval "stock_$(declare -f disable_internal_panels)"
+disable_internal_panels() { external_connected || return 0; stock_disable_internal_panels; }
+
+cmd="${1:-daemon}"
+case "$cmd" in
+  daemon|start) run_daemon ;;
+  stop)         stop_daemon ;;
+  session-active) shift; cmd_session_active "$@" ;;
+  policy)       shift; cmd_policy "$@" ;;
+  lid)          shift; cmd_lid "$@" ;;
+  status)       cmd_status ;;
+  is-laptop)    hw_laptop ;;
+  -h|--help|help) usage ;;
+  *)
+    log "unknown command: $cmd" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
