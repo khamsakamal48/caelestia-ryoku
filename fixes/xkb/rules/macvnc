@@ -1,0 +1,12 @@
+// Rules for wayvnc only: like evdev, but with symbols/macvnc_pc in place of pc.
+! model = keycodes
+  * = evdev+aliases(qwerty)
+
+! model = types
+  * = complete
+
+! model = compat
+  * = complete
+
+! model layout = symbols
+  * * = macvnc_pc+%l+inet(evdev)

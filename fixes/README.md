@@ -13,6 +13,7 @@ problem, or changed the files a fix hooks into.
 | [Panel off in clamshell](#3-panel-off-in-clamshell) | Lid shut with external monitor: panel stays on, external display lags/flickers | `clamshell/fix-clamshell.sh` |
 | [wayvnc autostart](#4-wayvnc-autostart) | No VNC server after login | `hypr/user-blocks.lua` (wayvnc) |
 | [Wispr Flow](#5-wispr-flow) | No tray icon; ghost frosted panel that eats clicks | `hypr/user-blocks.lua` (wispr-flow) |
+| [Mac Command as Super over VNC](#6-mac-command-as-super-over-vnc) | From macOS Screen Sharing, ⌘ does nothing as Super | `xkb/rules/macvnc`, `xkb/symbols/macvnc_pc`, `hypr/user-blocks.lua` (wayvnc) |
 
 Apply them in this order: fix 1 was the root cause behind most of the rest.
 
@@ -113,3 +114,35 @@ Logs: `journalctl --user -t wayvnc`.
 
 **Apply.** Install Wispr Flow and turn on "Open at login" in the app, then
 paste the `wispr-flow` block into `~/.config/hypr/user.lua`.
+
+## 6. Mac Command as Super over VNC
+
+**Problem.** macOS Screen Sharing sends the Command key as `Alt_L` and never
+sends Option at all. wayvnc passes that on as Alt, so no Super binding fires
+from the Mac. The fix gives wayvnc its own XKB rules: a copy of `symbols/pc`
+in which `Alt_L` exists only on `<LWIN>`, and `<LWIN>` carries only `Mod4`.
+wayvnc looks keysyms up in its own keymap, so the Mac's "Alt" now presses
+Super. The laptop's own keyboard is untouched. Trade-off: there is no Alt
+key over VNC from Screen Sharing.
+
+**Check.** Connect from Screen Sharing, run `kitty +kitten show_key -m kitty`
+and press ⌘. `LEFT_ALT` means the fix is needed; `LEFT_SUPER` means it is
+applied or no longer needed.
+
+**Apply.**
+
+```sh
+install -Dm644 fixes/xkb/rules/macvnc ~/.config/xkb/rules/macvnc
+install -Dm644 fixes/xkb/symbols/macvnc_pc ~/.config/xkb/symbols/macvnc_pc
+xkbcli compile-keymap --rules macvnc --layout us | grep -E 'key <(LALT|LWIN)>'
+```
+
+The last line should show `<LALT>` as `Meta_L` and `<LWIN>` as
+`Super_L, Alt_L`. Then use the `wayvnc` block from `hypr/user-blocks.lua`
+(it sets `XKB_DEFAULT_RULES=macvnc`) and restart wayvnc by logging out and
+back in. `macvnc_pc` is a copy of `/usr/share/X11/xkb/symbols/pc` with five
+lines changed; on a new xkeyboard-config, diff it against the system file
+before installing.
+
+**Undo.** Delete both xkb files and drop `XKB_DEFAULT_RULES=macvnc` from the
+wayvnc block.

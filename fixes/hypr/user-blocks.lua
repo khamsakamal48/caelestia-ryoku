@@ -93,8 +93,10 @@ hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd("hyprctl reload"), { locked = t
 -- Respawn loop: wayvnc exits when its output goes away (e.g. a display
 -- handoff), and nothing would restart it. Output goes to the journal
 -- (`journalctl --user -t wayvnc`).
+-- XKB_DEFAULT_RULES=macvnc (~/.config/xkb/rules/macvnc) makes the Mac's
+-- Command key, which Screen Sharing sends as Alt_L, act as Super.
 hl.on("hyprland.start", function()
-    hl.exec_cmd("while :; do systemd-cat -t wayvnc wayvnc; sleep 2; done")
+    hl.exec_cmd("while :; do XKB_DEFAULT_RULES=macvnc systemd-cat -t wayvnc wayvnc; sleep 2; done")
 end)
 -- <<< wayvnc <<<
 
