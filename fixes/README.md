@@ -14,6 +14,7 @@ problem, or changed the files a fix hooks into.
 | [wayvnc autostart](#4-wayvnc-autostart) | No VNC server after login | `hypr/user-blocks.lua` (wayvnc) |
 | [Wispr Flow](#5-wispr-flow) | No tray icon; ghost frosted panel that eats clicks | `hypr/user-blocks.lua` (wispr-flow) |
 | [Mac Command as Super over VNC](#6-mac-command-as-super-over-vnc) | From macOS Screen Sharing, ⌘ does nothing as Super | `xkb/rules/macvnc`, `xkb/symbols/macvnc_pc`, `hypr/user-blocks.lua` (wayvnc) |
+| [Wallpaper socket crash](#7-wallpaper-socket-crash) | "Quickshell has crashed" dialog at login or after `ryoku update` | `quickshell/wallpaper-socket-crash.patch` |
 
 Apply them in this order: fix 1 was the root cause behind most of the rest.
 
@@ -146,3 +147,37 @@ before installing.
 
 **Undo.** Delete both xkb files and drop `XKB_DEFAULT_RULES=macvnc` from the
 wayvnc block.
+
+## 7. Wallpaper socket crash
+
+**Problem.** Ryoku's `modules/wallpaper/Wallpaper.qml` sets
+`connected = false` inside the ryogami `Socket`'s `onError` handler. When
+ryogami restarts (login, or an update restarting session daemons), the
+socket gets `PeerClosedError`. Setting `connected = false` there frees the
+`QLocalSocket` while Quickshell 0.3.2's `Socket::onSocketError` is still
+running. It then calls `deleteLater()` on null and the shell segfaults.
+The log shows `QObject::disconnect: Unexpected nullptr parameter` right
+before the crash. The patch defers the disconnect with `Qt.callLater`.
+
+**Check.**
+
+```sh
+grep -n -A2 'onError' /usr/share/ryoku/config/quickshell/shell/modules/wallpaper/Wallpaper.qml
+```
+
+`connected = false` directly under `onError: {` means the bug is still
+there. Also check the Quickshell version: a release newer than 0.3.2 may
+null-check the socket in `onSocketError`.
+
+**Apply.** Fork the file into the overlay so updates keep it, then patch
+both the fork and the live copy. Quickshell reloads the shell by itself.
+
+```sh
+d=~/.config/ryoku/user_edits/quickshell/shell/modules/wallpaper
+install -Dm644 /usr/share/ryoku/config/quickshell/shell/modules/wallpaper/Wallpaper.qml $d/Wallpaper.qml
+patch -d ~/.config/ryoku/user_edits/quickshell/shell -p1 < fixes/quickshell/wallpaper-socket-crash.patch
+cp $d/Wallpaper.qml ~/.config/quickshell/shell/modules/wallpaper/Wallpaper.qml
+systemctl --user restart ryogami   # the shell must stay up
+```
+
+**Undo.** `ryoku reset ~/.config/quickshell/shell/modules/wallpaper/Wallpaper.qml`.
