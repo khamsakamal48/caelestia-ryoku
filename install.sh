@@ -147,4 +147,5 @@ cat <<'EOF'
   SUPER + I              Nexus (Caelestia settings)
   SUPER + Escape         quick settings drawer
 If the bar ever falls back to Ryoku's default after an update, re-run ./install.sh.
+Blurry Slack / Wispr Flow tray icons? Run fixes/tray-icons/apply.sh (asks first).
 EOF

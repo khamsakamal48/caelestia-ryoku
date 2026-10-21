@@ -15,6 +15,7 @@ problem, or changed the files a fix hooks into.
 | [Wispr Flow](#5-wispr-flow) | No tray icon; ghost frosted panel that eats clicks | `hypr/user-blocks.lua` (wispr-flow) |
 | [Mac Command as Super over VNC](#6-mac-command-as-super-over-vnc) | From macOS Screen Sharing, ⌘ does nothing as Super | `xkb/rules/macvnc`, `xkb/symbols/macvnc_pc`, `hypr/user-blocks.lua` (wayvnc) |
 | [Wallpaper socket crash](#7-wallpaper-socket-crash) | "Quickshell has crashed" dialog at login or after `ryoku update` | `quickshell/wallpaper-socket-crash.patch` |
+| [Tray icons](#8-tray-icons) | Blurry full-colour app icons (Slack) in the bar tray | `tray-icons/apply.sh`, `tray-icons/icons/` |
 
 Apply them in this order: fix 1 was the root cause behind most of the rest.
 
@@ -181,3 +182,39 @@ systemctl --user restart ryogami   # the shell must stay up
 ```
 
 **Undo.** `ryoku reset ~/.config/quickshell/shell/modules/wallpaper/Wallpaper.qml`.
+
+## 8. Tray icons
+
+**Problem.** Electron apps (Slack, Wispr Flow) send their tray icon as a tiny
+full-colour pixmap. Caelestia scales it up and, with "recolour" on, tints it
+by its dominant colour, so it shows as a blurry blob next to the crisp
+theme glyphs.
+
+**Fix.** `tray-icons/icons/` holds one single-colour glyph per app, named
+after the tray item's Id. `apply.sh` copies them to
+`~/.config/caelestia/assets/tray-icons/` and adds a `bar.tray.iconSubs`
+entry per Id to `~/.config/caelestia/shell.json`. Caelestia tints the glyph
+with the theme, and app updates do not touch either file. It asks before
+changing anything (`-y` skips the question) and is safe to re-run.
+
+**Apply.** After `./install.sh`, with the apps installed:
+
+```sh
+fixes/tray-icons/apply.sh
+```
+
+**Add an app.** Find its Id while it runs, then drop a white-on-transparent
+glyph (SVG, or a 44px PNG with the mark in the middle 30px) named
+`<Id>.svg` or `<Id>.png` into `tray-icons/icons/` and re-run `apply.sh`.
+
+```sh
+busctl --user get-property org.kde.StatusNotifierWatcher /StatusNotifierWatcher \
+    org.kde.StatusNotifierWatcher RegisteredStatusNotifierItems
+busctl --user get-property <bus name> /StatusNotifierItem org.kde.StatusNotifierItem Id
+```
+
+The Slack glyph is the mark from Slack's own icon with every shape filled
+white. An override replaces the app's icon in every state, so Slack's
+unread badge no longer shows in the tray.
+
+**Undo.** Remove the entries from `bar.tray.iconSubs` in `shell.json`.
