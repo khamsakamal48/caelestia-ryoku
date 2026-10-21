@@ -16,6 +16,7 @@ problem, or changed the files a fix hooks into.
 | [Mac Command as Super over VNC](#6-mac-command-as-super-over-vnc) | From macOS Screen Sharing, ⌘ does nothing as Super | `xkb/rules/macvnc`, `xkb/symbols/macvnc_pc`, `hypr/user-blocks.lua` (wayvnc) |
 | [Wallpaper socket crash](#7-wallpaper-socket-crash) | "Quickshell has crashed" dialog at login or after `ryoku update` | `quickshell/wallpaper-socket-crash.patch` |
 | [Tray icons](#8-tray-icons) | Blurry full-colour app icons (Slack) in the bar tray | `tray-icons/apply.sh`, `tray-icons/icons/` |
+| [rclone sleep](#9-rclone-sleep) | Lid shut, then on open: black screen with only a cursor, or a frozen lock screen | `sleep/rclone-sleep@.service` |
 
 Apply them in this order: fix 1 was the root cause behind most of the rest.
 
@@ -218,3 +219,35 @@ white. An override replaces the app's icon in every state, so Slack's
 unread badge no longer shows in the tray.
 
 **Undo.** Remove the entries from `bar.tray.iconSubs` in `shell.json`.
+
+## 9. rclone sleep
+
+**Problem.** `rclone-gdrive` and `rclone-onedrive` are user services serving
+FUSE mounts. On suspend, systemd freezes `user.slice` (rclone included) after
+NetworkManager has dropped the network. Any process touching `~/GDrive` or
+`~/OneDrive` then waits in D state on a server that cannot answer. The freeze
+times out (`Failed to freeze unit 'user.slice': Connection timed out`), the
+kernel freeze fails (`tasks refusing to freeze` in `fuse_dentry_revalidate`),
+and `systemd-sleep` gives up with `Device or resource busy`. logind retries
+about every 100s while the lid is shut, and each attempt leaves the session
+frozen for most of that time. Opening the lid lands in one of those windows.
+
+**Check.**
+
+```sh
+journalctl -b -1 | grep -E "Failed to freeze unit|refusing to freeze|fuse_"
+```
+
+**Apply.** The unit stops both mounts before `sleep.target` and starts them
+again on resume. The mount services restart on failure until the network is
+back.
+
+```sh
+sudo install -Dm644 fixes/sleep/rclone-sleep@.service /etc/systemd/system/rclone-sleep@.service
+sudo systemctl daemon-reload && sudo systemctl enable rclone-sleep@$USER.service
+```
+
+Test with `systemctl suspend`. After resume, `journalctl -b -u rclone-sleep@$USER`
+should show the stop and start, and `mount -t fuse.rclone` both mounts.
+
+**Undo.** `sudo systemctl disable rclone-sleep@$USER.service` and delete the unit.

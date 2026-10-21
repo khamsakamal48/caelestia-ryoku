@@ -1,0 +1,19 @@
+# Stop %i's rclone FUSE mounts before sleep and start them again on resume.
+# A frozen or offline rclone leaves its clients stuck in D state, which
+# blocks the user.slice and kernel freezes, so suspend fails and retries
+# with the session frozen.
+[Unit]
+Description=Stop rclone mounts of %i around sleep
+Before=sleep.target
+StopWhenUnneeded=yes
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Bounded so a stuck mount cannot block suspend for long.
+TimeoutStartSec=30
+ExecStart=-/usr/bin/systemctl --user -M %i@ stop rclone-gdrive.service rclone-onedrive.service
+ExecStop=-/usr/bin/systemctl --user -M %i@ start --no-block rclone-gdrive.service rclone-onedrive.service
+
+[Install]
+WantedBy=sleep.target
