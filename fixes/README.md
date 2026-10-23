@@ -17,6 +17,7 @@ problem, or changed the files a fix hooks into.
 | [Wallpaper socket crash](#7-wallpaper-socket-crash) | "Quickshell has crashed" dialog at login or after `ryoku update` | `quickshell/wallpaper-socket-crash.patch` |
 | [Tray icons](#8-tray-icons) | Blurry full-colour app icons (Slack) in the bar tray | `tray-icons/apply.sh`, `tray-icons/icons/` |
 | [rclone sleep](#9-rclone-sleep) | Lid shut, then on open: black screen with only a cursor, or a frozen lock screen | `sleep/rclone-sleep@.service` |
+| [Ryo app windows](#10-ryo-app-windows) | Ryoku Settings opens over the bar; Ryoport's SSH terminal and other Ryo apps open as small floating windows outside the gaps | `hypr/user-blocks.lua` (ryo-apps-tile) |
 
 Apply them in this order: fix 1 was the root cause behind most of the rest.
 
@@ -251,3 +252,32 @@ Test with `systemctl suspend`. After resume, `journalctl -b -u rclone-sleep@$USE
 should show the stop and start, and `mount -t fuse.rclone` both mounts.
 
 **Undo.** `sudo systemctl disable rclone-sleep@$USER.service` and delete the unit.
+
+## 10. Ryo app windows
+
+**Problem.** Ryoku's shipped `~/.config/hypr/modules/window_rules.lua` floats
+its own apps at fixed sizes: Ryoku Settings (`Super+,`) at 99% x 96% of the
+monitor, which covers the Caelestia bar and border, and Ryoport's SSH terminal
+(`kitty --class ryoport-ssh`), Ryostore, ryovm and Welcome at small centred
+sizes. Floating windows skip the tiling layout, so they get neither the gaps
+nor the space the bar reserves.
+
+**Fix.** The block in `user.lua` (loaded last, never touched by updates) tiles
+the terminal-class windows (`ryoport-ssh`, `ryostore`, `ryoku-rashin-setup`).
+The Quickshell apps cannot tile: each sets a `minimumSize` of 980-1180px, and
+Hyprland keeps them floating even when asked to tile. They stay floating,
+sized to the area a tiled window gets (`monitor_w - 110` x `monitor_h - 60`)
+and centred inside the reserved area. Ryoku Settings caps its own height at
+`(monitor_h - 56) * 0.99`, so it ends up 6px shorter than a tile.
+
+**Check.** Open Ryoku Settings and a Ryoport SSH session, then compare them
+with a normal tiled window in `hyprctl clients`. On this laptop (1920x1080,
+gaps 18, border 2, bar reserving 60/10/10/10) a tile is 1810x1020 at (80,30).
+
+**Apply.** Copy the `ryo-apps-tile` block from `hypr/user-blocks.lua` into
+`~/.config/hypr/user.lua` and run `hyprctl reload`. Rules apply when a window
+opens, so close and reopen the app (for the hub, make sure the `qs -c hub`
+process has exited). If the bar width, `gaps_out` or `border_size` changes,
+recompute the 110/60 margins. If an app floats at the wrong size after a Ryoku
+update, Ryoku renamed its class or title: check `hyprctl clients` and update
+the match.

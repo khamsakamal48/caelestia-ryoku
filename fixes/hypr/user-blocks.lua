@@ -100,3 +100,34 @@ hl.on("hyprland.start", function()
 end)
 -- <<< wayvnc <<<
 
+
+-- >>> ryo-apps-tile >>>
+-- Fit Ryoku's own app windows to the Caelestia frame, so they sit inside
+-- the Caelestia bar and border and get the normal gaps like every other
+-- window. Ryoku's shipped modules/window_rules.lua floats them at fixed sizes
+-- (Ryoku Settings at 99% x 96% of the monitor, Ryoport's SSH terminal at
+-- 900x560), and floating windows skip the layout, its gaps and the bar's
+-- reserved space. user.lua loads last, so these rules win; Ryoku updates
+-- never touch this file. If a Ryo app floats again after an update, Ryoku
+-- renamed its class or title: check `hyprctl clients` and update the match.
+-- Delete this block to undo.
+hl.window_rule({
+    name  = "ryo-apps-tile",
+    match = { class = "^(ryoport-ssh|ryostore|ryoku-rashin-setup)$" },
+    float = false,
+})
+-- Ryoku's Quickshell apps cannot tile: each sets a minimumSize of 980-1180px,
+-- wider than a tile, and Hyprland keeps them floating even when asked to tile.
+-- Float them sized to the area a tiled window gets instead: the monitor minus
+-- Caelestia's reserved edges (60 left, 10 top/right/bottom) and 18px gaps
+-- plus 2px border on each side; `center` centres inside the reserved area.
+-- shortcut: the 110/60 margins are hard-coded for Caelestia's bar and gaps 18;
+-- recompute them if the bar width, gaps_out or border_size changes.
+hl.window_rule({
+    name   = "ryo-pages-fit",
+    match  = { title = "^(Ryoku Settings|Ryostore|ryovm|Welcome to Ryoku)$" },
+    float  = true,
+    size   = { "monitor_w - 110", "monitor_h - 60" },
+    center = true,
+})
+-- <<< ryo-apps-tile <<<
