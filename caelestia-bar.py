@@ -49,8 +49,8 @@ OLD_VIEWS = STATE / "ryoku/store/barstyle-views" / ID
 EXCLUDE_DIRS = {"cae-adapters"}
 
 
-def set_bar_style(style):
-    line = "call settings.patch " + json.dumps({"path": "barStyle", "value": style}) + "\n"
+def patch_setting(path, value):
+    line = "call settings.patch " + json.dumps({"path": path, "value": value}) + "\n"
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
         s.settimeout(3)
         s.connect(str(SOCK))
@@ -59,6 +59,10 @@ def set_bar_style(style):
             s.recv(4096)
         except socket.timeout:
             pass
+
+
+def set_bar_style(style):
+    patch_setting("barStyle", style)
 
 
 def current_style():
@@ -131,6 +135,9 @@ def install():
     if prev != ID:
         PREV.write_text(prev)
     set_bar_style(ID)
+    # Ryoku's deck frost blurs the wallpaper whenever the workspace has a window
+    # (a pinned overlay like Wispr Flow's pill counts on every workspace).
+    patch_setting("deckFrostEnabled", False)
 
     # Older copies are unreferenced now.
     for old in INSTALL_ROOT.iterdir():
