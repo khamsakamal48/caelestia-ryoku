@@ -50,6 +50,7 @@ Item {
                 id: card
 
                 required property var modelData
+                required property int index
                 readonly property bool critical: modelData.urgency === 2
 
                 Layout.fillWidth: true
@@ -57,6 +58,15 @@ Item {
                 radius: Tokens.rounding.large
                 // The panel's blob is the background; only critical ones get a card.
                 color: critical ? Colours.palette.m3secondaryContainer : "transparent"
+
+                // Divider between stacked notifications, centred in the gap above.
+                Rectangle {
+                    visible: card.index > 0
+                    y: -Tokens.spacing.medium / 2
+                    width: parent.width
+                    height: 1
+                    color: Colours.palette.m3outlineVariant
+                }
 
                 ColumnLayout {
                     id: content
