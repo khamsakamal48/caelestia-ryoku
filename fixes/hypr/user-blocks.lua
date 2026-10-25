@@ -125,7 +125,7 @@ hl.window_rule({
 -- recompute them if the bar width, gaps_out or border_size changes.
 hl.window_rule({
     name   = "ryo-pages-fit",
-    match  = { title = "^(Ryoku Settings|Ryostore|ryovm|Welcome to Ryoku)$" },
+    match  = { title = "^(Ryostore|ryovm|Welcome to Ryoku)$" },
     float  = true,
     size   = { "monitor_w - 110", "monitor_h - 60" },
     center = true,
