@@ -143,3 +143,42 @@ hl.window_rule({
     float = false,
 })
 -- <<< tile-gnome-apps <<<
+
+
+-- >>> ryoport-workspaces >>>
+-- Ryoport sessions tile inside the Caelestia frame like any window. A machine
+-- display (SPICE, VNC, RDP) opens on a fresh empty workspace and switches to it;
+-- Ryoport SSH terminals join the workspace of an open machine window, else take
+-- a fresh one. user.lua loads last, so the rules beat Ryoku's float rules.
+-- Delete this block to undo.
+hl.window_rule({
+    name  = "ryoport-tile",
+    match = { class = "^(spicy|Vncviewer|dev\\.ryoku\\.ryoport_console|dev\\.ryoku\\.ryoport_ssh)$" },
+    float = false,
+})
+local RYOPORT_MACHINE = { spicy = true, Vncviewer = true, ["dev.ryoku.ryoport_console"] = true }
+hl.on("window.open", function(win)
+    if not win then return end
+    local class = win.class or ""
+    if class ~= "dev.ryoku.ryoport_ssh" and not RYOPORT_MACHINE[class] then return end
+    local address = win.address
+    -- A window can only be moved once it is mapped, so wait a beat.
+    hl.timer(function()
+        local used, ws = {}, nil
+        for _, w in ipairs(hl.get_windows()) do
+            if w.address ~= address and w.workspace then
+                if not w.floating then used[w.workspace.id] = true end
+                if class == "dev.ryoku.ryoport_ssh" and not ws and RYOPORT_MACHINE[w.class or ""] then
+                    ws = w.workspace.id
+                end
+            end
+        end
+        if not ws then
+            ws = 1
+            while used[ws] do ws = ws + 1 end
+        end
+        hl.dispatch(hl.dsp.window.move({ workspace = tostring(ws), window = "address:" .. address }))
+        hl.dispatch(hl.dsp.focus({ workspace = tostring(ws) }))
+    end, { timeout = 100, type = "oneshot" })
+end)
+-- <<< ryoport-workspaces <<<

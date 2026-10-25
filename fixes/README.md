@@ -281,3 +281,9 @@ process has exited). If the bar width, `gaps_out` or `border_size` changes,
 recompute the 110/60 margins. If an app floats at the wrong size after a Ryoku
 update, Ryoku renamed its class or title: check `hyprctl clients` and update
 the match.
+
+**Ryoport workspaces.** The `ryoport-workspaces` block in `hypr/user-blocks.lua`
+tiles Ryoport's SPICE/VNC/RDP windows and SSH terminals (Ryoku now names the SSH
+class `dev.ryoku.ryoport_ssh`). A machine display opens on a fresh workspace and
+switches to it; an SSH terminal joins the workspace of an open machine window,
+else takes a fresh one. Copy it into `~/.config/hypr/user.lua` and `hyprctl reload`.
