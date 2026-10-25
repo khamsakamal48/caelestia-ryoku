@@ -65,7 +65,7 @@ Item {
                     y: -Tokens.spacing.medium / 2
                     width: parent.width
                     height: 1
-                    color: Colours.palette.m3outlineVariant
+                    color: Colours.palette.m3outline
                 }
 
                 ColumnLayout {
