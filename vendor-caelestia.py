@@ -64,6 +64,13 @@ PATCHES = [
     ("utils/SysInfo.qml",
      "Qt.resolvedUrl(`${Quickshell.shellDir}/assets/logo.svg`)",
      'Qt.resolvedUrl("../assets/logo.svg")'),
+    # The bar and dashboard show the Arch logo where Caelestia's own would be.
+    ("utils/SysInfo.qml",
+     'property string osLogo: Qt.resolvedUrl("../assets/logo.svg")\n    property bool isDefaultLogo: true',
+     'property string osLogo: "file:///usr/share/pixmaps/archlinux-logo.svg"\n    property bool isDefaultLogo: false'),
+    ("utils/SysInfo.qml",
+     'root.osLogo = Qt.resolvedUrl(`${Quickshell.shellDir}/assets/logo.svg`);\n                root.isDefaultLogo = true;',
+     'root.osLogo = "file:///usr/share/pixmaps/archlinux-logo.svg";\n                root.isDefaultLogo = false;'),
     # Ryoku owns Hyprland keybinds: don't bind Caps/Num Lock at runtime to
     # refresh the lock indicators; poll the device state (one IPC call) instead.
     ("services/Hypr.qml",
