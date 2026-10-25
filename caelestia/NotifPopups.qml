@@ -80,7 +80,10 @@ Item {
 
                     // Notification image, else the app's icon; hidden when neither resolves.
                     Image {
-                        readonly property string icon: card.modelData.appIcon || ""
+                        // Apps that send no icon (ryoku's own toasts) fall back to their desktop entry, then a theme icon named after them.
+                        readonly property string icon: card.modelData.appIcon
+                            || DesktopEntries.heuristicLookup(card.modelData.appName)?.icon
+                            || (card.modelData.appName === "ryoku" ? "ryoku-hub" : card.modelData.appName.toLowerCase())
 
                         Layout.alignment: Qt.AlignTop
                         Layout.preferredWidth: 40
