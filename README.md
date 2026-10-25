@@ -50,7 +50,7 @@ It asks for your sudo password once. Re-running it is safe: use it to update, or
 - **Launcher**: Caelestia's launcher with apps, calculator and actions. Wallpaper, scheme and variant pickers are removed (Ryoku owns those); session actions go through Ryoku; "Settings" opens Nexus.
 - **Controls**: Ryoku's own Controls content (unchanged), hosted as a Caelestia drawer: centred on the right border, rounded and melting out of it like the dashboard. Opens on `SUPER + Escape`; Escape or a click outside closes it, and it swaps with the notification sidebar.
 - **Session menu**: logout/shutdown/reboot go through Ryoku's session daemon; hibernate stays Caelestia's.
-- **Notification sidebar**: mirrors Ryoku's notification server (no second server); Do Not Disturb is Ryoku's. Popups stay Ryoku's.
+- **Notification sidebar**: mirrors Ryoku's notification server (no second server); Do Not Disturb is Ryoku's. Popups are drawn by Caelestia (`NotifPopups.qml`, wallpaper-driven colours) from Ryoku's popup list; `patches/Config.patch` stops Ryoku drawing its own.
 - **Nexus settings**: trimmed of pages that do nothing on Ryoku (wallpaper & style, updates/plugins placeholders, utilities panel, weather location, colour engine, popup/toast settings). Its audio/bluetooth/network buttons open Ryoku's panels.
 - **Adapters**: Caelestia's Colours follow Ryoku's live palette, Weather uses Ryoku's weather daemon, Players use MPRIS.
 - **Hyprland**: Caelestia no longer injects Caps/Num Lock keybinds into Hyprland at runtime (it polls device state instead); Ryoku owns keybinds.

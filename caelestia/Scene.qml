@@ -119,6 +119,9 @@ Scope {
                 width: panel.width * (1 - controls.offsetScale) + win.borderThickness
             }
             PanelRegion {
+                panel: notifPopups
+            }
+            PanelRegion {
                 panel: popoutsWrapper
                 width: panel.width * (1 - popoutsWrapper.offsetScale)
             }
@@ -374,7 +377,7 @@ Scope {
                 }
 
                 // Caelestia stacks this under its notification popups and above
-                // its utilities panel; neither is carried (popups are Ryoku's).
+                // its utilities panel; the utilities panel is not carried.
                 Sidebar.Wrapper {
                     id: sidebar
 
@@ -458,6 +461,14 @@ Scope {
                     transform: Matrix4x4 {
                         matrix: launcherBg.deformMatrix
                     }
+                }
+
+                NotifPopups {
+                    id: notifPopups
+
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.margins: 12
                 }
 
                 BarPopouts.ClipWrapper {

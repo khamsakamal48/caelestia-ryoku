@@ -1,0 +1,10 @@
+--- a/quickshell/shell/services/Config.qml
++++ b/quickshell/shell/services/Config.qml
+@@ -81,6 +81,7 @@
+         && !(root.nomarchy && root.nomarchy.notifications === false))
+         || (barStyle === "iris" && (root.inir?.iris?.modules?.notificationPopup ?? true))
+         || barStyle === "tansu"
++        || barStyle === "caelestia"
+         || (barStyle === "gokko" && BarProducts.gokkoReady)
+     // Only a style that plays its own notification sound silences the shell's
+     // cue; Nomarchy and Tansu draw banners but play nothing themselves.
