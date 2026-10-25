@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Caelestia.Config
 import shell.services as R
 import "cae/components"
@@ -52,6 +53,8 @@ Item {
                 required property var modelData
                 required property int index
                 readonly property bool critical: modelData.urgency === 2
+                // The freedesktop "click to open the app" action, if the app sent one.
+                readonly property var defaultAction: (modelData.actions || []).find(a => a.identifier === "default") ?? null
 
                 Layout.fillWidth: true
                 implicitHeight: content.implicitHeight + Tokens.padding.medium * 2
@@ -68,11 +71,29 @@ Item {
                     color: Colours.palette.m3outline
                 }
 
-                ColumnLayout {
+                RowLayout {
                     id: content
 
                     anchors.fill: parent
                     anchors.margins: Tokens.padding.medium
+                    spacing: Tokens.spacing.medium
+
+                    // Notification image, else the app's icon; hidden when neither resolves.
+                    Image {
+                        readonly property string icon: card.modelData.appIcon || ""
+
+                        Layout.alignment: Qt.AlignTop
+                        Layout.preferredWidth: 40
+                        Layout.preferredHeight: 40
+                        visible: status === Image.Ready
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        sourceSize: Qt.size(80, 80)
+                        source: card.modelData.image || (icon.startsWith("/") ? icon : icon ? Quickshell.iconPath(icon, true) : "")
+                    }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
                     spacing: Tokens.spacing.extraSmall
 
                     RowLayout {
@@ -84,6 +105,21 @@ Item {
                             color: Colours.palette.m3outline
                             font: Tokens.font.body.small
                             elide: Text.ElideRight
+                        }
+                        MaterialIcon {
+                            visible: card.defaultAction !== null
+                            text: "arrow_outward"
+                            color: Colours.palette.m3primary
+
+                            MouseArea {
+                                anchors.fill: parent
+                                anchors.margins: -Tokens.padding.small
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    card.defaultAction.invoke();
+                                    R.Notifs.removePopup(card.modelData);
+                                }
+                            }
                         }
                         MaterialIcon {
                             text: "close"
@@ -147,6 +183,7 @@ Item {
                             }
                         }
                     }
+                }
                 }
 
                 // Clicking the body hides the popup; the notification stays in the sidebar.
