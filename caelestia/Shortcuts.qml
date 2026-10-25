@@ -6,8 +6,7 @@ import "cae/services"
 import "cae/modules/nexus"
 
 // Caelestia's global shortcuts and IPC (modules/Shortcuts.qml), for the parts
-// ported here: launcher, dashboard, session menu, notification sidebar, Ryoku's
-// quick settings (as a Caelestia drawer) and Nexus. Bind them in
+// ported here: launcher, dashboard, session menu, notification sidebar and Nexus. Bind them in
 // Ryoku Hub > Keybinds as global `caelestia:<name>`, or call them with
 // `qs -c shell ipc call drawers toggle launcher` / `... nexus open`.
 // Created once (by the first screen's scene), not per monitor.
@@ -48,12 +47,6 @@ Scope {
         onPressed: root.toggle("sidebar")
     }
 
-    CustomShortcut {
-        name: "quicksettings"
-        description: "Toggle Ryoku quick settings"
-        onPressed: root.toggle("quicksettings")
-    }
-
     // Caelestia toggles on release of a bare Super tap; bound to a chord
     // here (Super+Space), so it toggles on press.
     CustomShortcut {
@@ -64,7 +57,7 @@ Scope {
 
     IpcHandler {
         function toggle(drawer: string): void {
-            if (["launcher", "dashboard", "session", "sidebar", "quicksettings"].includes(drawer))
+            if (["launcher", "dashboard", "session", "sidebar"].includes(drawer))
                 root.toggle(drawer);
         }
 

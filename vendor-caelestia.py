@@ -160,25 +160,6 @@ PATCHES = [
     ("modules/bar/popouts/Content.qml",
      "                    TrayMenu {\n                        popouts: root.popouts\n                        trayItem: trayMenu.modelData.menu // qmllint disable unresolved-type\n",
      "                    DaemonTrayMenu {\n                        popouts: root.popouts\n                        service: trayMenu.modelData\n"),
-    # Ryoku's quick-settings panel, hosted as a right-edge drawer by Scene.qml.
-    ("components/ScreenState.qml",
-     "    property bool sidebar\n",
-     "    property bool sidebar\n    property bool quicksettings\n"),
-    # ...with its settings (cae-extras QuickSettings service) in Nexus > Panels > Quick settings,
-    # appended as the last Panels sub-page (10, after the taskbar component pages) so no index shifts.
-    ("modules/nexus/PageCompRegistry.qml",
-     "                Component {\n                    BarClock {}\n                }\n",
-     "                Component {\n                    BarClock {}\n                }\n\n"
-     "                // Ryoku quick-settings drawer\n"
-     "                Component {\n                    QuickSettingsPanel {}\n                }\n"),
-    ("modules/nexus/pages/PanelsPage.qml", 'import "../../../modules/nexus/common"\n',
-     'import "../../../modules/nexus/common"\nimport "../../../services"\n'),
-    ("modules/nexus/pages/PanelsPage.qml",
-     "            onClicked: root.nState.openSubPage(4)\n        }\n",
-     "            onClicked: root.nState.openSubPage(4)\n        }\n\n"
-     "        NavRow {\n            icon: \"tune\"\n            text: Tr.tr(\"Quick settings\")\n"
-     "            subtext: QuickSettings.settings.showOnHover ? Tr.tr(\"Reveal on hover\") : Tr.tr(\"Keybind only\")\n"
-     "            onClicked: root.nState.openSubPage(10)\n        }\n"),
     # Dashboard "AI usage" tab (cae-extras/modules/dashboard/AiUsageTab.qml), last in the row.
     ("modules/dashboard/Content.qml", 'import "../../components/filedialog"\n', 'import "../../components/filedialog"\nimport "../../services"\n'),
     ("modules/dashboard/Content.qml",

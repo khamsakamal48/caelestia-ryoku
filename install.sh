@@ -94,9 +94,17 @@ else
     step "Caelestia plugin is up to date"
 fi
 
-# --- 3. Ryoku quick settings: module rail on the right edge ----------------
-# user_edits forks, regenerated from the shipped files so they track Ryoku updates.
-step "Patching Ryoku quick settings (rail on the right)"
+# --- 3. Ryoku Controls (Super+Escape): hosted in the Caelestia drawer -------
+# Scene.qml draws Ryoku's Controls content in a drawer centred on the right
+# border. Ryoku's own Controls window is fork-patched to stay hidden while the
+# caelestia bar style is active (a user_edits fork, regenerated from the
+# shipped file so it tracks Ryoku updates). Also drop the quick-settings forks
+# older versions of this script laid down, so they can't shadow Ryoku's files.
+step "Hosting Ryoku Controls (Super+Escape) in the Caelestia drawer"
+for f in MenuQuickSettings QsTabRail QsTip; do
+    rel=quickshell/shell/modules/bar/framebars/menus/$f.qml
+    [[ -e $EDITS/$rel ]] && { ryoku reset "$rel" -y || warn "could not reset the old $f fork"; }
+done
 for p in "$HERE"/patches/*.patch; do
     rel=$(sed -n 's|^--- a/||p' "$p" | head -1)
     dest=$EDITS/$rel
@@ -106,16 +114,11 @@ for p in "$HERE"/patches/*.patch; do
         mv "$dest.new" "$dest"
     else
         rm -f "$dest.new" "$dest.new.orig" "$dest.new.rej"
-        warn "$(basename "$p") no longer applies to this Ryoku version; skipped (cosmetic)"
+        # A stale fork would shadow the newer shipped file.
+        [[ -e $dest ]] && ryoku reset "$rel" -y
+        warn "$(basename "$p") no longer applies to this Ryoku version; Controls will show twice (Ryoku's own and Caelestia's)"
     fi
 done
-python3 -I - <<'EOF'
-import json, os, socket
-s = socket.socket(socket.AF_UNIX); s.settimeout(3)
-s.connect(os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "ryoku-shell.sock"))
-s.sendall(("call settings.patch " + json.dumps({"path": "frameBars.menus.quick-settings.anchor", "value": "right"}) + "\n").encode())
-s.recv(4096)
-EOF
 
 # --- 4. keybinds -------------------------------------------------------------
 step "Setting keybinds"
@@ -145,7 +148,7 @@ cat <<'EOF'
   SUPER + Space          Caelestia launcher   (Ryoku launcher: SUPER + SHIFT + Space)
   SUPER + G              notification sidebar
   SUPER + I              Nexus (Caelestia settings)
-  SUPER + Escape         quick settings drawer
+  SUPER + Escape         Ryoku Controls (centred, right border)
 If the bar ever falls back to Ryoku's default after an update, re-run ./install.sh.
 Blurry Slack / Wispr Flow tray icons? Run fixes/tray-icons/apply.sh (asks first).
 EOF

@@ -1,0 +1,47 @@
+--- a/quickshell/shell/modules/sidebar/Sidebar.qml
++++ b/quickshell/shell/modules/sidebar/Sidebar.qml
+@@ -10,6 +10,8 @@
+     id: root
+     required property var screen
+     property bool active: false
++    // The Caelestia bar style hosts Controls in its own drawer, so this window stays hidden.
++    readonly property bool hosted: Config.barStyle === "caelestia" && BarProducts.brokenStyle !== "caelestia"
+     readonly property real s: Tokens.uiScaleFor(screen ? screen.name : "")
+     readonly property var clearances: SidebarState.railClearances(screen)
+     readonly property real gap: SidebarState.edgeGap * s
+@@ -81,7 +83,7 @@
+     PanelWindow {
+         id: dismiss
+         screen: root.screen
+-        visible: root.active
++        visible: root.active && !root.hosted
+         color: "transparent"
+         exclusionMode: ExclusionMode.Ignore
+         exclusiveZone: 0
+@@ -117,7 +119,7 @@
+     PanelWindow {
+         id: panel
+         screen: root.screen
+-        visible: root.active || root.reveal > 0.001
++        visible: (root.active || root.reveal > 0.001) && !root.hosted
+         color: "transparent"
+         exclusionMode: ExclusionMode.Ignore
+         exclusiveZone: 0
+@@ -147,7 +149,7 @@
+             Loader {
+                 id: shippedLoader
+                 anchors.fill: parent
+-                active: !root.storeRuns
++                active: !root.storeRuns && !root.hosted
+                 sourceComponent: Item {
+                     readonly property real fittedHeight: chrome.fittedHeight
+ 
+@@ -169,7 +171,7 @@
+             Loader {
+                 id: storeLoader
+                 anchors.fill: parent
+-                active: root.storeRuns
++                active: root.storeRuns && !root.hosted
+                 asynchronous: true
+                 visible: root.storeRuns
+                 readonly property string url: root.storeUrl

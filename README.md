@@ -27,7 +27,7 @@ It asks for your sudo password once. Re-running it is safe: use it to update, or
    - AUR (via `yay`, bootstrapped if missing): `qt6-m3shapes-git libcava ttf-rubik-vf`
    - Google Sans Flex, downloaded from google/fonts into `~/.local/share/fonts` (its AUR package points at a file Google renamed)
 2. **Caelestia C++ plugin**: clones `caelestia-dots/shell` at the pinned commit the QML was vendored from, builds it with `-DENABLE_MODULES=plugin`, and installs it to `/usr/lib/qt6/qml/Caelestia`. It rebuilds automatically on re-run when Qt has been updated.
-3. **Quick settings drawer**: patches Ryoku's quick-settings panel (as `user_edits` forks, regenerated from the shipped files) so its module rail sits on the right edge, and anchors the panel to the right.
+3. **Controls (Super+Escape)**: patches Ryoku's Controls window (a `user_edits` fork of `Sidebar.qml`, regenerated from the shipped file) to stay hidden under this bar style, because Caelestia draws Controls itself; and removes the quick-settings forks older versions of this installer made.
 4. **Keybinds**: moves Ryoku's launcher to `SUPER + SHIFT + Space` (a Ryoku Settings rebind) and adds a marked block to `~/.config/hypr/user.lua`:
 
    | Keys | Action |
@@ -36,7 +36,7 @@ It asks for your sudo password once. Re-running it is safe: use it to update, or
    | `SUPER + SHIFT + Space` | Ryoku launcher |
    | `SUPER + G` | Notification sidebar |
    | `SUPER + I` | Nexus (Caelestia settings) |
-   | `SUPER + Escape` | Ryoku quick settings, as a Caelestia drawer |
+   | `SUPER + Escape` | Ryoku Controls (stays Ryoku's own bind) |
 
    Plus a float + centre window rule for the Nexus window.
 5. **Caelestia settings**: copies starter `~/.config/caelestia/shell.json` and `ai-usage.json` only if you don't have them.
@@ -48,7 +48,7 @@ It asks for your sudo password once. Re-running it is safe: use it to update, or
 - **Dashboard**: media (with lyrics), performance, weather, calendar, plus a new **AI usage** tab (Claude Code plan limits and daily tokens, fed by Ryoku's `ryoku-ai-usage` collector; toggle it in Nexus > Panels > Dashboard).
 - **Lyrics for browser/YouTube tracks**: when Caelestia's lookup fails on messy metadata (channel name as artist, full video title), a cleaned-title LRCLIB search finds the synced lyrics; matches are cached in `~/.local/state/caelestia/lyrics_match.json`.
 - **Launcher**: Caelestia's launcher with apps, calculator and actions. Wallpaper, scheme and variant pickers are removed (Ryoku owns those); session actions go through Ryoku; "Settings" opens Nexus.
-- **Quick settings drawer**: Ryoku's quick settings slide out of the right border on `SUPER + Escape`, or when the cursor reaches the right screen edge (closing again when it leaves). Turn the hover off in Nexus > Panels > Quick settings; it is stored in `~/.config/caelestia/quick-settings.json`.
+- **Controls**: Ryoku's own Controls content (unchanged), hosted as a Caelestia drawer: centred on the right border, rounded and melting out of it like the dashboard. Opens on `SUPER + Escape`; Escape or a click outside closes it, and it swaps with the notification sidebar.
 - **Session menu**: logout/shutdown/reboot go through Ryoku's session daemon; hibernate stays Caelestia's.
 - **Notification sidebar**: mirrors Ryoku's notification server (no second server); Do Not Disturb is Ryoku's. Popups stay Ryoku's.
 - **Nexus settings**: trimmed of pages that do nothing on Ryoku (wallpaper & style, updates/plugins placeholders, utilities panel, weather location, colour engine, popup/toast settings). Its audio/bluetooth/network buttons open Ryoku's panels.
@@ -65,14 +65,16 @@ This restores your previous bar style and hands `BarProducts.qml` back to Ryoku.
 
 - delete the `caelestia-ryoku` block from `~/.config/hypr/user.lua`
 - undo the launcher rebind in Ryoku Hub > Keybinds
-- `ryoku reset quickshell/shell/modules/bar/framebars/menus/MenuQuickSettings.qml` (and `QsTabRail.qml`, `QsTip.qml`)
+- `ryoku reset quickshell/shell/modules/sidebar/Sidebar.qml` (the uninstall command does this)
 - optionally `sudo rm -r /usr/lib/qt6/qml/Caelestia` and the AUR packages
 
 ## Troubleshooting
 
 - **Bar fell back to Ryoku's default** after a Ryoku or Qt update: re-run `./install.sh` (add `--rebuild` to force a plugin rebuild).
 - **`ryoku doctor` flags `BarProducts.qml`** after a Ryoku update: expected; re-run `./install.sh` to regenerate the fork from the new shipped file.
-- **A quick-settings patch "no longer applies"**: Ryoku changed that file. Everything else still installs; only the rail stays on the left.
+
+- **Controls show twice** (Ryoku's own panel plus Caelestia's): `patches/Sidebar.patch` no longer applies to this Ryoku version; Ryoku changed `Sidebar.qml`, so the patch needs re-porting.
+- **Right/bottom edge of a window goes transparent**: capture `hyprctl clients -j | jq -c '.[]|select(.focusHistoryID==0)|[.class,.at,.size]'` and `hyprctl monitors -j | jq -c '.[0].reserved'` while it is happening. A tile of 80,30 1810x1020 with reserved `[60,10,10,10]` means the app did not redraw after a resize (the client's fault, not the frame).
 
 ## For maintainers: updating Caelestia
 
@@ -90,8 +92,8 @@ install.sh            one-shot installer
 caelestia-bar.py      installs / uninstalls the bar style
 vendor-caelestia.py   re-vendors Caelestia's QML (maintainers)
 caelestia/            the bar style: Scene.qml, cae/ (vendored), cae-adapters/, cae-extras/
-patches/              Ryoku quick-settings patches
 hypr/caelestia.lua    keybind block added to user.lua
+patches/              Ryoku patches (Controls window hidden)
 config/caelestia/     starter Caelestia settings
 fixes/                this laptop's Ryoku fixes (clamshell, VNC, conda, Wispr Flow); manual, see fixes/README.md
 ```

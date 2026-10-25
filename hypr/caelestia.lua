@@ -5,8 +5,6 @@
 hl.bind("SUPER + Space", hl.dsp.global("caelestia:launcher"))   -- Caelestia launcher
 hl.bind("SUPER + G", hl.dsp.global("caelestia:sidebar"))        -- notification sidebar
 hl.bind("SUPER + I", hl.dsp.global("caelestia:nexus"))          -- Nexus settings
-hl.unbind("SUPER + Escape")                                      -- drop Ryoku's frame-menu quick settings
-hl.bind("SUPER + Escape", hl.dsp.global("caelestia:quicksettings")) -- quick settings as a Caelestia drawer
 hl.window_rule({
     name   = "caelestia-nexus-float",
     match  = { class = "org\\.quickshell", title = "Nexus.*" },

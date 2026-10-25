@@ -2,7 +2,6 @@ import QtQuick.Layouts
 import Caelestia.Config
 import Caelestia.I18n
 import "../../../modules/nexus/common"
-import "../../../services"
 PageBase {
     id: root
 
@@ -41,13 +40,6 @@ PageBase {
             text: Tr.tr("Sidebar")
             subtext: Config.sidebar.enabled ? Tr.trCtx("Enabled", "panel status") : Tr.trCtx("Disabled", "panel status")
             onClicked: root.nState.openSubPage(4)
-        }
-
-        NavRow {
-            icon: "tune"
-            text: Tr.tr("Quick settings")
-            subtext: QuickSettings.settings.showOnHover ? Tr.tr("Reveal on hover") : Tr.tr("Keybind only")
-            onClicked: root.nState.openSubPage(10)
         }
     }
 }

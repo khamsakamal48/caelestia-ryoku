@@ -37,8 +37,9 @@ CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or HOME / ".config")
 INSTALL_ROOT = DATA / "caelestia-ryoku"
 REL_PRODUCTS = "quickshell/shell/services/BarProducts.qml"
 BASE_PRODUCTS = Path("/usr/share/ryoku/config") / REL_PRODUCTS
+REL_SIDEBAR = "quickshell/shell/modules/sidebar/Sidebar.qml"
 FORK_PRODUCTS = CONFIG / "ryoku/user_edits" / REL_PRODUCTS
-BUILTINS_TAIL = '        "kairos": "barstyles/kairos/Scene.qml"\n    })'
+BUILTINS_HEAD = '    readonly property var builtins: ({\n'
 PREV = STATE / "ryoku/caelestia-bar.previous"
 SOCK = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp") / "ryoku-shell.sock"
 SHELL_JSON = CONFIG / "ryoku/shell.json"
@@ -84,13 +85,13 @@ def tree_hash(files):
 
 def write_fork(scene: Path):
     base = BASE_PRODUCTS.read_text()
-    assert BUILTINS_TAIL in base, f"{BASE_PRODUCTS} changed; update BUILTINS_TAIL in this script"
-    entry = f'        "kairos": "barstyles/kairos/Scene.qml",\n' \
-            f'        // Added by caelestia-bar.py (caelestia-ryoku); `ryoku reset {REL_PRODUCTS}` removes it.\n' \
-            f'        "{ID}": "{scene.as_uri()}"\n    }})'
+    assert BUILTINS_HEAD in base, f"{BASE_PRODUCTS} changed; update BUILTINS_HEAD in this script"
+    # First entry, so new Ryoku builtins appended after it can't break the anchor.
+    entry = BUILTINS_HEAD + f'        // Added by caelestia-bar.py (caelestia-ryoku); `ryoku reset {REL_PRODUCTS}` removes it.\n' \
+            f'        "{ID}": "{scene.as_uri()}",\n'
     FORK_PRODUCTS.parent.mkdir(parents=True, exist_ok=True)
     tmp = FORK_PRODUCTS.with_suffix(".qml.tmp")
-    tmp.write_text(base.replace(BUILTINS_TAIL, entry, 1))
+    tmp.write_text(base.replace(BUILTINS_HEAD, entry, 1))
     os.replace(tmp, FORK_PRODUCTS)
 
 
@@ -145,6 +146,8 @@ def uninstall():
         set_bar_style(prev)
         time.sleep(1)
     subprocess.run(["ryoku", "reset", REL_PRODUCTS, "-y"], check=True)
+    if (CONFIG / "ryoku/user_edits" / REL_SIDEBAR).exists():
+        subprocess.run(["ryoku", "reset", REL_SIDEBAR, "-y"], check=True)
     shutil.rmtree(INSTALL_ROOT, ignore_errors=True)
     shutil.rmtree(OLD_VIEWS, ignore_errors=True)
     PREV.unlink(missing_ok=True)

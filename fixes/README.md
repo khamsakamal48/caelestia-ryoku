@@ -263,7 +263,7 @@ sizes. Floating windows skip the tiling layout, so they get neither the gaps
 nor the space the bar reserves.
 
 **Fix.** The block in `user.lua` (loaded last, never touched by updates) tiles
-the terminal-class windows (`ryoport-ssh`, `ryostore`, `ryoku-rashin-setup`).
+the terminal-class windows (`dev.ryoku.ryoport_ssh`, `ryostore`, `ryoku-rashin-setup`).
 The Quickshell apps cannot tile: each sets a `minimumSize` of 980-1180px, and
 Hyprland keeps them floating even when asked to tile. They stay floating,
 sized to the area a tiled window gets (`monitor_w - 110` x `monitor_h - 60`)

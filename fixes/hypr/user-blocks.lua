@@ -113,7 +113,7 @@ end)
 -- Delete this block to undo.
 hl.window_rule({
     name  = "ryo-apps-tile",
-    match = { class = "^(ryoport-ssh|ryostore|ryoku-rashin-setup)$" },
+    match = { class = "^(dev\\.ryoku\\.ryoport_ssh|ryostore|ryoku-rashin-setup)$" },
     float = false,
 })
 -- Ryoku's Quickshell apps cannot tile: each sets a minimumSize of 980-1180px,

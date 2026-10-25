@@ -26,8 +26,8 @@ import "cae/modules/sidebar" as Sidebar
 // popouts, dashboard and session menu (vendored under cae/) inside its blob
 // border, laid out and driven the way Caelestia does, plus its launcher,
 // notification sidebar (fed by Ryoku's notification server) and Nexus
-// settings app. Ryoku's quick-settings panel rides along as a right-edge
-// drawer, so it melts out of the border like Caelestia's own panels. Ryoku keeps what it owns: notifications, OSDs,
+// settings app. Ryoku's Controls (Super+Escape) is hosted as a
+// centred right-border drawer. Ryoku keeps what it owns: notifications, OSDs,
 // keybinds, wallpaper and theme, and session actions (routed through Ryoku's
 // session daemon).
 Scope {
@@ -68,6 +68,8 @@ Scope {
         readonly property real borderThickness: contentItem.CC.Config.border.thickness
         readonly property real borderRounding: contentItem.CC.Config.border.rounding
         readonly property color surfaceColour: Cae.Colours.tPalette.m3surface
+        // Ryoku's Controls (Super+Escape); its own window stays hidden under this bar style.
+        readonly property bool controlsOpen: R.SidebarState.isOpen(root.modelData)
 
         screen: root.modelData
         visible: !root.fullscreen && !!screenState
@@ -76,7 +78,7 @@ Scope {
         anchors { top: true; bottom: true; left: true; right: true }
 
         WlrLayershell.layer: WlrLayer.Top
-        WlrLayershell.keyboardFocus: screenState?.launcher || screenState?.session || screenState?.quicksettings ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+        WlrLayershell.keyboardFocus: screenState?.launcher || screenState?.session || controlsOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
         WlrLayershell.namespace: "ryoku-caelestia-bar"
 
         // Caelestia's drawers/Regions: input on the bar and border, and on each
@@ -102,7 +104,7 @@ Scope {
                 id: sessionRegion
                 panel: sessionWrapper
                 x: win.width - width
-                width: panel.width * (1 - session.offsetScale) + win.borderThickness + Math.max(sidebarRegion.width, quickSettingsRegion.width)
+                width: panel.width * (1 - session.offsetScale) + win.borderThickness + Math.max(sidebarRegion.width, controlsRegion.width)
             }
             PanelRegion {
                 id: sidebarRegion
@@ -111,10 +113,10 @@ Scope {
                 width: panel.width * (1 - sidebar.offsetScale) + win.borderThickness
             }
             PanelRegion {
-                id: quickSettingsRegion
-                panel: quickSettings
+                id: controlsRegion
+                panel: controls
                 x: win.width - width
-                width: panel.width * (1 - quickSettings.offsetScale) + win.borderThickness
+                width: panel.width * (1 - controls.offsetScale) + win.borderThickness
             }
             PanelRegion {
                 panel: popoutsWrapper
@@ -133,30 +135,26 @@ Scope {
 
         // Clicking outside the launcher or session menu closes it, as in Caelestia.
         HyprlandFocusGrab {
-            active: !!(win.screenState?.launcher || win.screenState?.session || win.screenState?.sidebar || win.screenState?.quicksettings)
+            active: !!(win.screenState?.launcher || win.screenState?.session || win.screenState?.sidebar || win.controlsOpen)
             windows: [win]
             onCleared: {
                 win.screenState.launcher = false;
                 win.screenState.session = false;
                 win.screenState.sidebar = false;
-                win.screenState.quicksettings = false;
+                R.SidebarState.close(root.modelData);
             }
         }
 
-        // The notification sidebar and quick settings share the right edge: one at a time.
+        // The notification sidebar and Controls share the right edge: one at a time.
         Connections {
             target: win.screenState
             function onSidebarChanged() {
                 if (win.screenState.sidebar)
-                    win.screenState.quicksettings = false;
-            }
-            function onQuicksettingsChanged() {
-                if (win.screenState.quicksettings)
-                    win.screenState.sidebar = false;
-                else
-                    interactions.quickSettingsHoverOpened = false;
+                    R.SidebarState.close(root.modelData);
             }
         }
+        onControlsOpenChanged: if (controlsOpen && screenState)
+            screenState.sidebar = false
 
         // Caelestia's border and panel backgrounds: one blob group, so panels
         // melt out of the border and wobble as they move.
@@ -211,11 +209,10 @@ Scope {
             }
 
             PanelBg {
-                id: quickSettingsBg
+                id: controlsBg
 
-                panel: quickSettings
-                deformAmount: 0.03
-                implicitHeight: panel.height * (1 / rawDeformMatrix.m22) + 2
+                panel: controls
+                deformAmount: 0.1
             }
 
             PanelBg {
@@ -261,14 +258,10 @@ Scope {
 
         // Caelestia's drawers/Interactions, for the panels carried here: bar
         // popouts on hover, scroll actions on the bar, the dashboard from the
-        // top edge, quick settings from the right edge. Panels and bar are its
+        // top edge. Panels and bar are its
         // children so their hover counts.
         MouseArea {
             id: interactions
-
-            // Quick settings opened by hovering the right edge closes when the
-            // cursor leaves it; opened by its keybind, it stays.
-            property bool quickSettingsHoverOpened
 
             function withinPanelWidth(panel: Item, x: real): bool {
                 const panelX = bar.implicitWidth + panel.x;
@@ -316,8 +309,6 @@ Scope {
                 if (containsMouse)
                     return;
                 win.screenState.dashboard = false;
-                if (quickSettingsHoverOpened)
-                    win.screenState.quicksettings = false;
                 if (!trayMenuOpen()) {
                     win.popouts.hasCurrent = false;
                     bar.closeTray();
@@ -335,15 +326,6 @@ Scope {
 
                 if (win.contentItem.CC.Config.launcher.showOnHover && !win.screenState.launcher && inBottomPanel(launcher, x, y))
                     win.screenState.launcher = true;
-
-                // The right edge belongs to the sidebar while it is open.
-                const inQuickSettings = inRightPanel(quickSettings, x, y);
-                if (Cae.QuickSettings.settings.showOnHover && inQuickSettings && !win.screenState.quicksettings && !win.screenState.sidebar) {
-                    win.screenState.quicksettings = true;
-                    quickSettingsHoverOpened = true;
-                } else if (quickSettingsHoverOpened && !inQuickSettings) {
-                    win.screenState.quicksettings = false;
-                }
 
                 if (x < bar.implicitWidth) {
                     bar.checkPopout(y);
@@ -371,8 +353,8 @@ Scope {
 
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.right
-                    anchors.rightMargin: Math.max(sidebar.width * (1 - sidebar.offsetScale), quickSettings.width * (1 - quickSettings.offsetScale))
-                    clip: sidebar.visible || quickSettings.visible
+                    anchors.rightMargin: Math.max(sidebar.width * (1 - sidebar.offsetScale), controls.width * (1 - controls.offsetScale))
+                    clip: sidebar.visible || controls.visible
 
                     implicitWidth: session.implicitWidth * (1 - session.offsetScale)
                     implicitHeight: session.implicitHeight
@@ -381,7 +363,7 @@ Scope {
                         id: session
 
                         screenState: win.screenState
-                        sidebarVisible: sidebar.visible || quickSettings.visible
+                        sidebarVisible: sidebar.visible || controls.visible
 
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.right: parent.right
@@ -406,26 +388,24 @@ Scope {
                     }
                 }
 
-                // Ryoku's quick-settings panel (Super+Esc) as a Caelestia drawer:
-                // slides out of the right border the way the sidebar does.
+                // Ryoku's Controls (Super+Escape), content untouched, hosted like the
+                // session menu: centred on the right border, melting out of it.
                 Item {
-                    id: quickSettings
+                    id: controls
 
-                    readonly property var menu: (R.Config.normalizedFrameBars.menus || {})["quick-settings"] || {}
-                    readonly property bool shouldBeActive: !!win.screenState?.quicksettings
-                    readonly property real pad: win.contentItem.CC.Tokens.padding.large
-                    readonly property real edgePad: Math.max(0, Math.min(pad, pad - win.borderThickness))
+                    readonly property bool shouldBeActive: win.controlsOpen
+                    readonly property real s: Tokens.uiScaleFor(root.modelData.name)
                     property real offsetScale: shouldBeActive ? 0 : 1
 
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
+                    anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.right
                     anchors.rightMargin: (-implicitWidth - 5) * offsetScale
-                    implicitWidth: (menu.minWidth || 410) + pad + edgePad
+                    implicitWidth: Math.min(688 * s, parent.width - 40)
+                    implicitHeight: Math.min(parent.height, controlsContent.item?.fittedHeight ?? 0)
                     visible: offsetScale < 1
                     opacity: 1 - offsetScale
                     transform: Matrix4x4 {
-                        matrix: quickSettingsBg.deformMatrix
+                        matrix: controlsBg.deformMatrix
                     }
 
                     Behavior on offsetScale {
@@ -433,37 +413,23 @@ Scope {
                     }
 
                     Loader {
-                        id: quickSettingsContent
+                        id: controlsContent
 
                         anchors.fill: parent
-                        anchors.leftMargin: quickSettings.pad
-                        anchors.topMargin: quickSettings.edgePad
-                        anchors.bottomMargin: quickSettings.edgePad
-                        anchors.rightMargin: quickSettings.edgePad
-                        active: quickSettings.shouldBeActive || quickSettings.visible
-                        focus: quickSettings.shouldBeActive
-                        source: Quickshell.shellPath("modules/bar/framebars/menus/MenuQuickSettings.qml")
+                        active: controls.shouldBeActive || controls.visible
+                        focus: controls.shouldBeActive
+                        Keys.onEscapePressed: R.SidebarState.close(root.modelData)
+                        Component.onCompleted: setSource(Quickshell.shellPath("modules/sidebar/SidebarChrome.qml"), {
+                            screen: root.modelData,
+                            s: Qt.binding(() => controls.s),
+                            active: Qt.binding(() => controls.shouldBeActive)
+                        })
 
-                        Keys.onEscapePressed: win.screenState.quicksettings = false
-                        onLoaded: item.requestClose.connect(() => win.screenState.quicksettings = false)
-
-                        Binding {
-                            target: quickSettingsContent.item
-                            property: "open"
-                            value: quickSettings.shouldBeActive
-                            when: quickSettingsContent.status === Loader.Ready
-                        }
-                        Binding {
-                            target: quickSettingsContent.item
-                            property: "avail"
-                            value: quickSettingsContent.height
-                            when: quickSettingsContent.status === Loader.Ready
-                        }
-                        Binding {
-                            target: quickSettingsContent.item
-                            property: "railOnRight"
-                            value: true
-                            when: quickSettingsContent.status === Loader.Ready
+                        Connections {
+                            target: controlsContent.item
+                            function onCloseRequested() {
+                                R.SidebarState.close(root.modelData);
+                            }
                         }
                     }
                 }
