@@ -28,12 +28,10 @@ It asks for your sudo password once. Re-running it is safe: use it to update, or
    - Google Sans Flex, downloaded from google/fonts into `~/.local/share/fonts` (its AUR package points at a file Google renamed)
 2. **Caelestia C++ plugin**: clones `caelestia-dots/shell` at the pinned commit the QML was vendored from, builds it with `-DENABLE_MODULES=plugin`, and installs it to `/usr/lib/qt6/qml/Caelestia`. It rebuilds automatically on re-run when Qt has been updated.
 3. **Controls (Super+Escape)**: patches Ryoku's Controls window (a `user_edits` fork of `Sidebar.qml`, regenerated from the shipped file) to stay hidden under this bar style, because Caelestia draws Controls itself; and removes the quick-settings forks older versions of this installer made.
-4. **Keybinds**: moves Ryoku's launcher to `SUPER + SHIFT + Space` (a Ryoku Settings rebind) and adds a marked block to `~/.config/hypr/user.lua`:
+4. **Keybinds**: leaves `SUPER + Space` as Ryoku's own launcher (Spotlight; rebind it in Ryoku Hub > Keybinds) and clears the rebind older versions made, then adds a marked block to `~/.config/hypr/user.lua`:
 
    | Keys | Action |
    |---|---|
-   | `SUPER + Space` | Caelestia launcher |
-   | `SUPER + SHIFT + Space` | Ryoku launcher |
    | `SUPER + G` | Notification sidebar |
    | `SUPER + I` | Nexus (Caelestia settings) |
    | `SUPER + Escape` | Ryoku Controls (stays Ryoku's own bind) |
@@ -64,7 +62,6 @@ python3 -I caelestia-bar.py uninstall
 This restores your previous bar style and hands `BarProducts.qml` back to Ryoku. To remove the rest:
 
 - delete the `caelestia-ryoku` block from `~/.config/hypr/user.lua`
-- undo the launcher rebind in Ryoku Hub > Keybinds
 - `ryoku reset quickshell/shell/modules/sidebar/Sidebar.qml` (the uninstall command does this)
 - optionally `sudo rm -r /usr/lib/qt6/qml/Caelestia` and the AUR packages
 

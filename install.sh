@@ -122,7 +122,8 @@ done
 
 # --- 4. keybinds -------------------------------------------------------------
 step "Setting keybinds"
-ryoku-hub desktop set-rebind "SUPER + Space" "SUPER + SHIFT + Space"
+# Super+Space stays Ryoku's launcher (Spotlight); drop the rebind older versions made.
+ryoku-hub desktop set-rebind "SUPER + Space" "SUPER + Space" || warn "could not clear the old launcher rebind"
 userlua=$CONFIG/hypr/user.lua
 [[ -f $userlua ]] || cp "$SHIPPED/hypr/user.lua" "$userlua"
 # Replace a previous copy of the block, then append the current one.
@@ -145,7 +146,6 @@ hyprctl reload >/dev/null || warn "hyprctl reload failed; log out and back in to
 
 step "Done"
 cat <<'EOF'
-  SUPER + Space          Caelestia launcher   (Ryoku launcher: SUPER + SHIFT + Space)
   SUPER + G              notification sidebar
   SUPER + I              Nexus (Caelestia settings)
   SUPER + Escape         Ryoku Controls (centred, right border)
