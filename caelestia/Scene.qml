@@ -120,6 +120,8 @@ Scope {
             }
             PanelRegion {
                 panel: notifPopups
+                x: win.width - width
+                width: panel.width * (1 - notifPopups.offsetScale) + win.borderThickness
             }
             PanelRegion {
                 panel: popoutsWrapper
@@ -209,6 +211,13 @@ Scope {
                 panel: sidebar
                 deformAmount: 0.03
                 implicitHeight: panel.height * (1 / rawDeformMatrix.m22) + 2
+            }
+
+            PanelBg {
+                id: notifBg
+
+                panel: notifPopups
+                deformAmount: 0.1
             }
 
             PanelBg {
@@ -466,9 +475,14 @@ Scope {
                 NotifPopups {
                     id: notifPopups
 
+                    blocked: sidebar.visible || controls.visible
+
                     anchors.top: parent.top
                     anchors.right: parent.right
-                    anchors.margins: 12
+                    anchors.rightMargin: (-implicitWidth - 5) * offsetScale
+                    transform: Matrix4x4 {
+                        matrix: notifBg.deformMatrix
+                    }
                 }
 
                 BarPopouts.ClipWrapper {

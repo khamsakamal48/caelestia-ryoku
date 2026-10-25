@@ -13,17 +13,35 @@ import "cae/services"
 Item {
     id: root
 
-    readonly property var popups: R.Notifs.popups.slice(0, 4)
+    // Held while the panel slides back out, so the cards don't vanish mid-exit.
+    property var popups: []
+    readonly property bool shouldBeActive: R.Notifs.popups.length > 0 && !blocked
+    // The right-edge sidebar and Controls own that edge while open.
+    property bool blocked: false
+    property real offsetScale: shouldBeActive ? 0 : 1
 
-    implicitWidth: 380
-    implicitHeight: col.implicitHeight
-    visible: popups.length > 0
+    Binding {
+        target: root
+        property: "popups"
+        value: R.Notifs.popups.slice(0, 4)
+        when: R.Notifs.popups.length > 0
+    }
+
+    implicitWidth: 380 + Tokens.padding.large * 2
+    implicitHeight: col.implicitHeight + Tokens.padding.large * 2
+    visible: offsetScale < 1
+    opacity: 1 - offsetScale
+
+    Behavior on offsetScale {
+        Anim {}
+    }
 
     ColumnLayout {
         id: col
 
-        width: parent.width
-        spacing: Tokens.spacing.small
+        anchors.fill: parent
+        anchors.margins: Tokens.padding.large
+        spacing: Tokens.spacing.medium
 
         Repeater {
             model: root.popups
@@ -37,7 +55,8 @@ Item {
                 Layout.fillWidth: true
                 implicitHeight: content.implicitHeight + Tokens.padding.medium * 2
                 radius: Tokens.rounding.large
-                color: critical ? Colours.palette.m3secondaryContainer : Colours.palette.m3surface
+                // The panel's blob is the background; only critical ones get a card.
+                color: critical ? Colours.palette.m3secondaryContainer : "transparent"
 
                 ColumnLayout {
                     id: content
