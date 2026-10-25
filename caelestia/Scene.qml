@@ -339,6 +339,16 @@ Scope {
                 if (win.contentItem.CC.Config.launcher.showOnHover && !win.screenState.launcher && inBottomPanel(launcher, x, y))
                     win.screenState.launcher = true;
 
+                // Right edge: the middle third opens Controls (Super+Escape), the top corner the notification sidebar (Super+G).
+                if (x >= width - Math.max(win.contentItem.CC.Config.border.minThickness, win.borderThickness) - 1) {
+                    if (y < 80 * Tokens.uiScaleFor(root.modelData.name)) {
+                        if (!win.screenState.sidebar && !win.controlsOpen)
+                            win.screenState.sidebar = true;
+                    } else if (y > height / 3 && y < height * 2 / 3 && !win.controlsOpen && !win.screenState.sidebar) {
+                        R.SidebarState.open(root.modelData);
+                    }
+                }
+
                 if (x < bar.implicitWidth) {
                     bar.checkPopout(y);
                 } else if (!trayMenuOpen() && !inLeftPanel(popoutsWrapper, x, y)) {
