@@ -131,3 +131,15 @@ hl.window_rule({
     center = true,
 })
 -- <<< ryo-apps-tile <<<
+
+-- >>> tile-gnome-apps >>>
+-- Tile GNOME-style apps instead of floating them. Ryoku's shipped
+-- window_rules.lua floats Nautilus at a fixed size and a few other apps;
+-- user.lua loads last, so these win. Dialogs and file pickers stay floating
+-- on purpose (a tiled transient dialog is unusable). Delete this block to undo.
+hl.window_rule({
+    name  = "tile-gnome-apps",
+    match = { class = "^(org\\.gnome\\.Nautilus|[Ss]potify|Ghosttype-app|pavucontrol|nm-connection-editor|blueman-manager)$" },
+    float = false,
+})
+-- <<< tile-gnome-apps <<<
