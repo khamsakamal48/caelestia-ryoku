@@ -44,7 +44,7 @@ Scope {
         screen: root.modelData
         color: "transparent"
         mask: Region {}
-        exclusiveZone: root.fullscreen ? 0 : size
+        exclusiveZone: size // never released on fullscreen: four reservations dropping and returning one by one leave Electron/Java tiles on a stale size
         implicitWidth: 1
         implicitHeight: 1
         WlrLayershell.namespace: "ryoku-caelestia-exclusion"
