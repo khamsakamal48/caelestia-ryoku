@@ -63,11 +63,14 @@ Item {
     CoverArt {
         id: cover
 
+        // Shrinks to leave room for the title, album, artist and controls when the card is short.
+        readonly property real inset: Tokens.padding.medium + root.arcCoverGap + prog.thickness
+
         anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.margins: Tokens.padding.medium + root.arcCoverGap + prog.thickness
-        implicitHeight: width
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.topMargin: inset
+        implicitWidth: Math.min(root.width - inset * 2, root.height - inset - title.implicitHeight - album.implicitHeight - artist.implicitHeight - controls.implicitHeight - Tokens.spacing.medium * 2 - Tokens.spacing.small * 2 - Tokens.padding.large * 2)
+        implicitHeight: implicitWidth
     }
 
     StyledText {
@@ -158,23 +161,5 @@ Item {
             disabled: !Players.active?.canGoNext
             onClicked: Players.active?.next()
         }
-    }
-
-    AnimatedImage {
-        id: bongocat
-
-        anchors.top: controls.bottom
-        anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.topMargin: Tokens.spacing.small
-        anchors.bottomMargin: Tokens.padding.large
-        anchors.margins: Tokens.padding.extraLargeIncreased
-
-        playing: Players.active?.isPlaying ?? false
-        speed: Audio.beatTracker.bpm / Config.general.mediaGifSpeedAdjustment // qmllint disable unresolved-type
-        source: Paths.absolutePath(Config.paths.mediaGif)
-        asynchronous: true
-        fillMode: AnimatedImage.PreserveAspectFit
     }
 }

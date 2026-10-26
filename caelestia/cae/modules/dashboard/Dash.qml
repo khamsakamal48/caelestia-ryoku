@@ -83,17 +83,38 @@ GridLayout {
         }
     }
 
-    Rect {
+    // Media above, Claude usage below it, in one column.
+    ColumnLayout {
         Layout.row: 0
         Layout.column: 5
         Layout.rowSpan: 2
         Layout.preferredWidth: media.implicitWidth
         Layout.fillHeight: true
+        spacing: root.rowSpacing
 
-        radius: Tokens.rounding.extraLarge * 2
+        Rect {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
-        Media {
-            id: media
+            radius: Tokens.rounding.extraLarge * 1.5
+
+            Media {
+                id: media
+            }
+        }
+
+        Rect {
+            visible: AiUsage.settings.showTile
+            Layout.fillWidth: true
+            Layout.preferredHeight: aiUsage.implicitHeight
+
+            radius: Tokens.rounding.extraLarge
+
+            AiUsageTile {
+                id: aiUsage
+
+                anchors.fill: parent
+            }
         }
     }
 

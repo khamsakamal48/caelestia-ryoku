@@ -86,7 +86,10 @@ Singleton {
         JsonAdapter {
             id: settingsAdapter
 
+            // Dashboard badge beside the photo: the user's full name instead of the window manager.
+            property bool showFullName: false
             property bool showTab: true
+            property bool showTile: true
             property bool showSession: true
             property bool showWeekly: true
             property bool showDaily: true

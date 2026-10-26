@@ -5,3 +5,4 @@ Media Media.qml
 Resources Resources.qml
 SmallWeather SmallWeather.qml
 User User.qml
+AiUsageTile AiUsageTile.qml

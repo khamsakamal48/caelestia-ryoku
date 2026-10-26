@@ -39,11 +39,18 @@ PageBase {
         }
 
         ToggleRow {
-            last: true
             text: Tr.tr("Show clock seconds")
             subtext: Tr.tr("Display seconds for the clock in the main panel")
             checked: Config.dashboard.showClockSeconds
             onToggled: GlobalConfig.dashboard.showClockSeconds = checked
+        }
+
+        ToggleRow {
+            last: true
+            text: Tr.tr("Show full name")
+            subtext: Tr.tr("Beside your photo, show your name instead of the window manager")
+            checked: AiUsage.settings.showFullName
+            onToggled: AiUsage.settings.showFullName = checked
         }
 
         // Tabs
@@ -159,6 +166,13 @@ PageBase {
             subtext: Tr.tr("Time until each limit resets; hover for the exact time")
             checked: AiUsage.settings.showCountdown
             onToggled: AiUsage.settings.showCountdown = checked
+        }
+
+        ToggleRow {
+            text: Tr.tr("Dashboard tile")
+            subtext: Tr.tr("5-hour and weekly usage as rings under the media player")
+            checked: AiUsage.settings.showTile
+            onToggled: AiUsage.settings.showTile = checked
         }
 
         StepperRow {

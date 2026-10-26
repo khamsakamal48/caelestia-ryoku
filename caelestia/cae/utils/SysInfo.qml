@@ -21,6 +21,8 @@ Singleton {
     property string uptimeShort
     readonly property string user: Quickshell.env("USER")
     readonly property string wm: Quickshell.env("XDG_CURRENT_DESKTOP") || Quickshell.env("XDG_SESSION_DESKTOP")
+    // Real name from the passwd GECOS field; the login name when it is empty.
+    property string fullName: user
     readonly property string shell: Quickshell.env("SHELL").split("/").pop()
 
     property string kernel
@@ -43,6 +45,14 @@ Singleton {
         const t = s.trim();
         const junk = ["to be filled by o.e.m.", "system product name", "system manufacturer", "system version", "default string", "o.e.m.", "not specified", "not applicable", "unknown", "none", ""];
         return junk.includes(t.toLowerCase()) ? "" : t;
+    }
+
+    Process {
+        running: true
+        command: ["getent", "passwd", root.user]
+        stdout: StdioCollector {
+            onStreamFinished: root.fullName = text.split(":")[4]?.split(",")[0].trim() || root.user
+        }
     }
 
     FileView {
@@ -139,7 +149,8 @@ Singleton {
                 parts.push(Tr.trN("%n minute", "%n minutes", minutes));
 
             root.uptime = parts.join(sep);
-            root.uptimeShort = parts.slice(0, 2).join(sep);
+            // Compact ("5 hrs. 2 min.") so the dashboard badge is not truncated.
+            root.uptimeShort = days > 0 ? `${days} ${days === 1 ? "day" : "days"} ${hours} ${hours === 1 ? "hr." : "hrs."}` : hours > 0 ? `${hours} ${hours === 1 ? "hr." : "hrs."} ${minutes} min.` : `${minutes} min.`;
         }
     }
 }
