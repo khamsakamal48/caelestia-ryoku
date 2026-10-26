@@ -7,3 +7,4 @@ LanguageAndRegion LanguageAndRegion.qml
 NetworkPage NetworkPage.qml
 PanelsPage PanelsPage.qml
 ServicesPage ServicesPage.qml
+SessionMascotRow SessionMascotRow.qml

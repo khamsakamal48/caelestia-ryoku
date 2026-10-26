@@ -48,6 +48,10 @@ ASSETS = ["bongocat.gif", "logo.svg", "kurukuru.gif"]
 
 # (file, old, new): exact replacements applied after the import rewrite.
 PATCHES = [
+    # Session menu mascot picker (cae-extras/modules/nexus/pages/SessionMascotRow.qml), last on the Panels page.
+    ("modules/nexus/pages/PanelsPage.qml",
+     "            onClicked: root.nState.openSubPage(4)\n        }\n",
+     "            onClicked: root.nState.openSubPage(4)\n        }\n\n        SessionMascotRow {}\n"),
     # Language & region keeps no weather settings (see NEXUS_CUTS).
     ("modules/nexus/PageRegistry.qml",
      'description: Tr.tr("UI language, weather location, display units")',
