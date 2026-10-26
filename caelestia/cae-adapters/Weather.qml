@@ -51,16 +51,19 @@ Singleton {
     readonly property string feelsLike: formatTemp(cc?.feelsLikeC)
     readonly property int humidity: cc?.humidity ?? 0
     readonly property real windSpeed: cc?.windSpeed ?? 0
-    // Ryoku gives "HH:mm"; format it like Caelestia does, following its 12/24-hour setting.
+    // Ryoku gives "HH:mm" or "h:mm AM"; format it like Caelestia does, following its 12/24-hour setting.
     readonly property string sunrise: formatClock(src?.sunrise)
     readonly property string sunset: formatClock(src?.sunset)
 
     function formatClock(hhmm: var): string {
-        const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm ?? ""));
+        const m = /^(\d{1,2}):(\d{2})\s*([AP]M)?$/i.exec(String(hhmm ?? "").trim());
         if (!m)
             return "--:--";
+        let h = Number(m[1]);
+        if (m[3])
+            h = h % 12 + (m[3].toUpperCase() === "PM" ? 12 : 0);
         const t = new Date();
-        t.setHours(Number(m[1]), Number(m[2]), 0, 0);
+        t.setHours(h, Number(m[2]), 0, 0);
         return Qt.formatDateTime(t, Units.twelveHourClock ? "h:mm A" : "h:mm");
     }
 
