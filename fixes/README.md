@@ -317,6 +317,4 @@ pkill -x wl-clip-persist   # the daemon restarts it, now as the stand-in
 close the source app, and the paste is empty. Ryoku's clipboard history
 (Super+V) is separate and still keeps entries.
 
-**Undo.** `rm ~/.local/bin/wl-clip-persist && pkill -x sleep` is too broad;
-instead delete the file and run `pkill -f 'sleep infinity$' -P $(pgrep -f 'ryoku-shell daemon')`,
-or log out and back in.
+**Undo.** `rm ~/.local/bin/wl-clip-persist`, then `systemctl --user restart ryoku-shell`.
