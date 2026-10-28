@@ -18,6 +18,7 @@ problem, or changed the files a fix hooks into.
 | [Tray icons](#8-tray-icons) | Blurry full-colour app icons (Slack) in the bar tray | `tray-icons/apply.sh`, `tray-icons/icons/` |
 | [rclone sleep](#9-rclone-sleep) | Lid shut, then on open: black screen with only a cursor, or a frozen lock screen | `sleep/rclone-sleep@.service` |
 | [Ryo app windows](#10-ryo-app-windows) | Ryoku Settings opens over the bar; Ryoport's SSH terminal and other Ryo apps open as small floating windows outside the gaps | `hypr/user-blocks.lua` (ryo-apps-tile) |
+| [Clipboard in RDP/VM](#11-clipboard-in-rdpvm) | Ctrl+C in a Windows RDP/VM window needs 2-3 tries; Ctrl+X loses the text | `clipboard/wl-clip-persist` |
 
 Apply them in this order: fix 1 was the root cause behind most of the rest.
 
@@ -287,3 +288,35 @@ tiles Ryoport's SPICE/VNC/RDP windows and SSH terminals (Ryoku now names the SSH
 class `dev.ryoku.ryoport_ssh`). A machine display opens on a fresh workspace and
 switches to it; an SSH terminal joins the workspace of an open machine window,
 else takes a fresh one. Copy it into `~/.config/hypr/user.lua` and `hyprctl reload`.
+
+## 11. Clipboard in RDP/VM
+
+**Problem.** The Ryoku shell daemon runs `wl-clip-persist --clipboard regular`,
+which re-owns the Wayland clipboard whenever its owner changes, so a copy
+survives the source app closing. FreeRDP (and SPICE) announce a copy to Wayland
+without sending the data until something pastes. `wl-clip-persist` fetches it
+at once and takes the selection over, which races with the guest's next
+update: the first Ctrl+C is lost, a retry sometimes wins, and Ctrl+X deletes
+the text before the copy has landed. Seen with `xfreerdp3 +clipboard`
+(winpodx container) and virt-manager.
+
+**Check.** Copy in a Windows RDP/VM app. If one Ctrl+C often fails to paste,
+and `pgrep -a wl-clip-persist` shows a process, test by freezing it:
+`kill -STOP $(pgrep wl-clip-persist)`. If copy then works, the fix applies.
+
+**Apply.** The daemon starts the program by name and restarts it when it
+dies, so killing it does not stick. `~/.local/bin` is first in its `PATH`, so a
+stand-in that only sleeps works:
+
+```sh
+install -Dm755 fixes/clipboard/wl-clip-persist ~/.local/bin/wl-clip-persist
+pkill -x wl-clip-persist   # the daemon restarts it, now as the stand-in
+```
+
+**Trade-off.** A copy no longer outlives the app it came from: copy, then
+close the source app, and the paste is empty. Ryoku's clipboard history
+(Super+V) is separate and still keeps entries.
+
+**Undo.** `rm ~/.local/bin/wl-clip-persist && pkill -x sleep` is too broad;
+instead delete the file and run `pkill -f 'sleep infinity$' -P $(pgrep -f 'ryoku-shell daemon')`,
+or log out and back in.

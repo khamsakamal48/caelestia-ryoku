@@ -1,0 +1,6 @@
+#!/bin/sh
+# Stand-in for wl-clip-persist, installed ahead of /usr/bin in PATH.
+# The Ryoku shell daemon starts "wl-clip-persist" by name and restarts it when
+# it exits, so a stand-in that just sleeps keeps the daemon content while
+# nothing re-owns the Wayland clipboard (which breaks RDP/SPICE copy).
+exec sleep infinity
