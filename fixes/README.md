@@ -19,7 +19,7 @@ problem, or changed the files a fix hooks into.
 | [rclone sleep](#9-rclone-sleep) | Lid shut, then on open: black screen with only a cursor, or a frozen lock screen | `sleep/rclone-sleep@.service` |
 | [Ryo app windows](#10-ryo-app-windows) | Ryoku Settings opens over the bar; Ryoport's SSH terminal and other Ryo apps open as small floating windows outside the gaps | `hypr/user-blocks.lua` (ryo-apps-tile) |
 | [Clipboard in RDP/VM](#11-clipboard-in-rdpvm) | Ctrl+C in a Windows RDP/VM window needs 2-3 tries; Ctrl+X loses the text | `clipboard/wl-clip-persist` |
-| [Wallpaper auto-rotate](#12-wallpaper-auto-rotate) | Auto-rotate in the wallpaper picker is clicked, but the wallpaper never changes | none (settings only) |
+| [Wallpaper auto-rotate](#12-wallpaper-auto-rotate) | Auto-rotate in the wallpaper picker is clicked, but the wallpaper never changes | `wallpaper/restart-rotation.sh` |
 
 Apply them in this order: fix 1 was the root cause behind most of the rest.
 
@@ -361,16 +361,17 @@ change the wallpaper. On 2026-10-30 it stayed active for over 13 minutes on
 the 300 s default with no change to `colors.json`, while both displays were
 on and the screen was unlocked. The ryogami log showed no error. Stopping
 and starting it again fixed it: the first change came exactly 300 s after
-the restart. From the GUI, click the auto-rotate button twice (off, then
-on). Headless, send `wall.rotation_stop` and then `wall.random_start` to the
-socket, the same way as the check above:
+the restart. Clicking the button earlier had not fixed it, but this did:
 
 ```sh
-python3 -I -c 'import socket,json
-def call(m,p={}):
-    s=socket.socket(socket.AF_UNIX); s.connect("/run/user/1000/ryogami.sock"); s.sendall(json.dumps({"id":1,"method":m,"params":p}).encode()+b"\n"); print(s.recv(4096).decode())
-call("wall.rotation_stop"); call("wall.random_start",{"interval":300,"types":["static","video","we"],"favourites_only":False})'
+fixes/wallpaper/restart-rotation.sh       # interval from settings (300 s default)
+fixes/wallpaper/restart-rotation.sh 30    # test: a change every 30 s
 ```
+
+It sends `wall.rotation_stop`, then `wall.random_start` with the same
+interval and sources the button reads from **Automation**, then checks
+that ryogami reports rotation active. Like the button, it lasts until logout
+or a ryogami restart. Run it again after login if rotation sticks again.
 
 What leaves it stuck is unknown. The manual-pause state below may be the
 cause.
