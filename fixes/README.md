@@ -356,6 +356,25 @@ go to **Automation**. Under **Random rotation**:
 
 To test, set Interval to 30 and watch for a change, then set it back.
 
+**Stuck rotation.** Rotation can report `"active":true` and still never
+change the wallpaper. On 2026-10-30 it stayed active for over 13 minutes on
+the 300 s default with no change to `colors.json`, while both displays were
+on and the screen was unlocked. The ryogami log showed no error. Stopping
+and starting it again fixed it: the first change came exactly 300 s after
+the restart. From the GUI, click the auto-rotate button twice (off, then
+on). Headless, send `wall.rotation_stop` and then `wall.random_start` to the
+socket, the same way as the check above:
+
+```sh
+python3 -I -c 'import socket,json
+def call(m,p={}):
+    s=socket.socket(socket.AF_UNIX); s.connect("/run/user/1000/ryogami.sock"); s.sendall(json.dumps({"id":1,"method":m,"params":p}).encode()+b"\n"); print(s.recv(4096).decode())
+call("wall.rotation_stop"); call("wall.random_start",{"interval":300,"types":["static","video","we"],"favourites_only":False})'
+```
+
+What leaves it stuck is unknown. The manual-pause state below may be the
+cause.
+
 **Not verified.** Whether rotation started with the button survives a logout
 or a `systemctl --user restart ryogami`, and whether picking a wallpaper by
 hand pauses rotation. The daemon has a manual-pause state, so that pause is
