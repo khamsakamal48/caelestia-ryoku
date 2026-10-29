@@ -19,6 +19,7 @@ problem, or changed the files a fix hooks into.
 | [rclone sleep](#9-rclone-sleep) | Lid shut, then on open: black screen with only a cursor, or a frozen lock screen | `sleep/rclone-sleep@.service` |
 | [Ryo app windows](#10-ryo-app-windows) | Ryoku Settings opens over the bar; Ryoport's SSH terminal and other Ryo apps open as small floating windows outside the gaps | `hypr/user-blocks.lua` (ryo-apps-tile) |
 | [Clipboard in RDP/VM](#11-clipboard-in-rdpvm) | Ctrl+C in a Windows RDP/VM window needs 2-3 tries; Ctrl+X loses the text | `clipboard/wl-clip-persist` |
+| [Wallpaper auto-rotate](#12-wallpaper-auto-rotate) | Auto-rotate in the wallpaper picker is clicked, but the wallpaper never changes | none (settings only) |
 
 Apply them in this order: fix 1 was the root cause behind most of the rest.
 
@@ -318,3 +319,47 @@ close the source app, and the paste is empty. Ryoku's clipboard history
 (Super+V) is separate and still keeps entries.
 
 **Undo.** `rm ~/.local/bin/wl-clip-persist`, then `systemctl --user restart ryoku-shell`.
+
+## 12. Wallpaper auto-rotate
+
+**Problem.** The auto-rotate button in the wallpaper picker's filter bar
+(Super+W, or Ctrl+R inside the picker) looks like it does nothing. It is not
+broken. The button asks the ryogami daemon (`wall.random_start`) to apply a
+random wallpaper every `general.randomInterval` seconds, and the default is
+300. So the first change comes 5 minutes after the click, not right away. A
+second click stops it again (the button stays highlighted while it runs).
+The button only starts rotation for the running daemon. The
+"Rotate automatically" setting (`general.randomRotate`) is the saved switch.
+This is not the iNiR "Shuffle wallpapers" option (`background.autoWallpaper`
+in `shell.json`): the Ryoku shell (`qs -c shell`) does not use that option.
+
+**Check.** Ask the daemon whether rotation is running:
+
+```sh
+python3 -I -c 'import socket,json; s=socket.socket(socket.AF_UNIX); s.connect("/run/user/1000/ryogami.sock"); s.sendall(json.dumps({"id":1,"method":"wall.rotation_status","params":{}}).encode()+b"\n"); print(s.recv(4096).decode())'
+```
+
+`"active":false` means rotation is off. While it runs, every wallpaper change
+also rewrites `~/.cache/ryoku/colors.json`, so `ls -l --time-style=+%T`
+on that file shows the time of the last change. With the test settings below,
+changes came 30 s apart (tested 2026-10-30).
+
+**Apply.** `~/.config/ryoku/ryogami.json` is a Ryoku store (`ryoku owner`),
+so change it in the GUI, not by hand. Open the wallpaper picker's settings and
+go to **Automation**. Under **Random rotation**:
+
+- turn on **Rotate automatically**
+- set **Interval** in seconds (minimum 10)
+- keep at least one of **Include images / video / Wallpaper Engine** on. If all
+  three are off, the button shows "Select at least one random source category"
+  and does not start
+
+To test, set Interval to 30 and watch for a change, then set it back.
+
+**Not verified.** Whether rotation started with the button survives a logout
+or a `systemctl --user restart ryogami`, and whether picking a wallpaper by
+hand pauses rotation. The daemon has a manual-pause state, so that pause is
+likely. If rotation stops on its own, use the **Rotate automatically** setting,
+not the button.
+
+**Undo.** Turn off **Rotate automatically**, or click the button again.
