@@ -20,6 +20,7 @@ problem, or changed the files a fix hooks into.
 | [Ryo app windows](#10-ryo-app-windows) | Ryoku Settings opens over the bar; Ryoport's SSH terminal and other Ryo apps open as small floating windows outside the gaps | `hypr/user-blocks.lua` (ryo-apps-tile) |
 | [Clipboard in RDP/VM](#11-clipboard-in-rdpvm) | Ctrl+C in a Windows RDP/VM window needs 2-3 tries; Ctrl+X loses the text | `clipboard/wl-clip-persist` |
 | [Wallpaper auto-rotate](#12-wallpaper-auto-rotate) | Auto-rotate in the wallpaper picker is clicked, but the wallpaper never changes | `wallpaper/restart-rotation.sh` |
+| [Theme stuck on dark](#13-theme-stuck-on-dark) | Shell stays dark in daytime; light mode and the sunrise/sunset Variant do nothing | none (settings only) |
 
 Apply them in this order: fix 1 was the root cause behind most of the rest.
 
@@ -383,3 +384,44 @@ likely. If rotation stops on its own, use the **Rotate automatically** setting,
 not the button.
 
 **Undo.** Turn off **Rotate automatically**, or click the button again.
+
+## 13. Theme stuck on dark
+
+**Problem.** The wallpaper picker's **Theme** tab offers **Smart** as the
+**Colour character** (`schemeType: scheme-smart` in
+`~/.config/ryoku/matugen.json`). matugen 4.2.0 supports it, but the Ryoku
+shell's own paint worker only knows the other nine scheme types. Every
+repaint then fails, so `~/.cache/ryoku/colors.json` stops changing and the
+shell keeps its last palette. Light mode, the moon button in the picker and
+**Variant: Sun (follows sunrise/sunset)** all save correctly but have no
+effect. Seen 2026-10-30: dark at 11:30 am, last palette written at 00:42 the
+night before.
+
+**Check.**
+
+```sh
+journalctl --user -u ryoku-shell --since today | grep 'unknown schemeType'
+jq -c '{mode,schemeType}' ~/.config/ryoku/matugen.json
+```
+
+`paintWorker matugen: unknown schemeType "scheme-smart"` means this fix
+applies. A newer Ryoku release may add Smart to the shell: check
+`grep -c scheme-smart $(command -v ryoku-shell)` (0 = still unsupported).
+
+**Apply.** `matugen.json` is a Ryoku store (`ryoku owner`), so use the GUI.
+In the wallpaper picker (Super+W), click the gear icon and open **Theme**:
+
+- set **Colour character** to anything but **Smart** (Vibrant was used here;
+  Tonal spot is matugen's default)
+- set **Variant** to **Sun (follows sunrise/sunset)**, or to **Light** or
+  **Dark**
+
+The palette repaints within a second or two. After the change here,
+`colors.json` was rewritten with a light background (`#fbfbe4`) and the
+error stopped.
+
+**Not verified.** Whether **Variant: Smart** (`mode: smart`) has the same
+problem, and whether **Sun** switches at the right times for the saved
+location (`general.locale`).
+
+**Undo.** Pick another Colour character or Variant in the same tab.
