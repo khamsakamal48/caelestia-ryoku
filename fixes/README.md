@@ -406,7 +406,7 @@ jq -c '{mode,schemeType}' ~/.config/ryoku/matugen.json
 
 `paintWorker matugen: unknown schemeType "scheme-smart"` means this fix
 applies. A newer Ryoku release may add Smart to the shell: check
-`grep -c scheme-smart $(command -v ryoku-shell)` (0 = still unsupported).
+`grep -q scheme-smart $(command -v ryoku-shell) && echo supported || echo unsupported`.
 
 **Apply.** `matugen.json` is a Ryoku store (`ryoku owner`), so use the GUI.
 In the wallpaper picker (Super+W), click the gear icon and open **Theme**:
