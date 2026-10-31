@@ -21,6 +21,8 @@ problem, or changed the files a fix hooks into.
 | [Clipboard in RDP/VM](#11-clipboard-in-rdpvm) | Ctrl+C in a Windows RDP/VM window needs 2-3 tries; Ctrl+X loses the text | `clipboard/wl-clip-persist` |
 | [Wallpaper auto-rotate](#12-wallpaper-auto-rotate) | Auto-rotate in the wallpaper picker is clicked, but the wallpaper never changes | `wallpaper/restart-rotation.sh` |
 | [Theme stuck on dark](#13-theme-stuck-on-dark) | Shell stays dark in daytime; light mode and the sunrise/sunset Variant do nothing | none (settings only) |
+| [Mirror breaks clamshell](#14-mirror-breaks-clamshell) | Lid shut with HDMI and power: external monitor is black with flickering text at the bottom | none (`ryoku-monitor` only) |
+| [OpenSSH server](#15-openssh-server) | No SSH access to the laptop; the one-line setup fails in fish | `ssh/setup-sshd.sh` |
 
 Apply them in this order: fix 1 was the root cause behind most of the rest.
 
@@ -425,3 +427,94 @@ problem, and whether **Sun** switches at the right times for the saved
 location (`general.locale`).
 
 **Undo.** Pick another Colour character or Variant in the same tab.
+
+## 14. Mirror breaks clamshell
+
+**Problem.** With HDMI and power connected and the lid shut, the external
+monitor (BenQ GW2490) showed only a black screen with flickering text at the
+bottom. The saved display layout had HDMI-A-1 set to **mirror** the laptop
+panel (`mirror = "eDP-1"` in `~/.config/hypr/monitors.lua` and
+`~/.config/ryoku/monitors-applied.json`). Super+P (`ryoku-monitor toggle`)
+saves mirroring, and every hotplug calls the saved layout back. Closing the lid
+turns eDP-1 off, so the monitor mirrors a display that is off. Hyprland then
+turns eDP-1 back on so the mirror has a source, the lid handling (fix 3 and
+`ryoku-clamshell`) turns it off again, and they keep fighting. On 2026-10-31
+the Hyprland log showed `eDP-1 enabledState changed` 2,568 times in one
+session, and `ryoku-shell` crashed with "The Wayland connection experienced a
+fatal error". Mirroring and clamshell cannot work together.
+
+**Check.**
+
+```sh
+grep -n 'mirror' ~/.config/hypr/monitors.lua
+jq -c '.monitors[] | {output, mirror}' ~/.config/ryoku/monitors-applied.json
+grep -c 'eDP-1 enabledState changed' "$(ls -t $XDG_RUNTIME_DIR/hypr/*/hyprland.log | head -1)"
+```
+
+A `mirror = "eDP-1"` on the external output means this fix applies. A count
+in the hundreds or thousands confirms the panel is switching on and off.
+
+**Apply.** Both files belong to `ryoku-monitor`, so change them through it
+(or Ryoku Hub > Displays, Super+comma). Back up first, then extend:
+
+```sh
+mkdir -p ~/.config/ryoku/backup-mirror && cp ~/.config/ryoku/monitors-applied.json ~/.config/hypr/monitors.lua ~/.config/ryoku/backup-mirror/
+ryoku-monitor extend
+```
+
+`extend` clears the mirror, but it also re-runs the DPI pass and deletes the
+saved layout. Here it moved the laptop panel from scale 1 to 1.5. To put the
+panel back at 1x and save a layout with no mirror:
+
+```sh
+ryoku-monitor apply '[{"output":"eDP-1","mode":"1920x1080@60.00","position":"0x0","scale":1,"transform":0,"vrr":0,"mirror":"","cm":"srgb","sdrbrightness":1,"disabled":false}]'
+hyprctl monitors -j | jq '.[] | {name, scale, mirrorOf}'
+```
+
+`mirrorOf` should be `"none"`. The next time the monitor is plugged in, it
+comes up as a separate display to the right of the panel. Don't press Super+P
+while docked: it turns mirroring back on.
+
+**Not verified.** Applied on 2026-10-31 with the monitor unplugged, so a lid
+close with HDMI connected is still untested. The fix 3 block in `user.lua`
+was written for Hyprland 0.56, and this laptop is now on 0.57. If the panel
+still flickers when docked without mirroring, test without that block
+(`fix-clamshell.sh --uninstall`).
+
+**Undo.** Copy the two backed-up files back, then `hyprctl reload`, or press
+Super+P with the monitor connected.
+
+## 15. OpenSSH server
+
+**Problem.** `openssh` is installed but `sshd` is disabled, so the laptop
+can't be reached over SSH. The one-line bash setup
+(`sudo install ... <<< $'PermitRootLogin no\n...'`) fails in fish with
+"Expected a string, but found a redirection", because fish has neither `<<<`
+nor `$'...'`.
+
+**Check.** `systemctl is-active sshd` prints `inactive`.
+
+**Apply.** The script is bash, so it runs the same from fish. It asks for the
+sudo password:
+
+```sh
+fixes/ssh/setup-sshd.sh
+```
+
+It installs `openssh` if it is missing and writes
+`/etc/ssh/sshd_config.d/10-local.conf` (`PermitRootLogin no`,
+`MaxAuthTries 4`). It checks the config with `sshd -t`, enables and starts
+`sshd`, then prints the LAN address to connect to (Docker bridges are left
+out). The fish one-liner it replaces, which also works:
+
+```fish
+printf 'PermitRootLogin no\nMaxAuthTries 4\n' | sudo install -Dm644 /dev/stdin /etc/ssh/sshd_config.d/10-local.conf; and sudo systemctl enable --now sshd
+```
+
+Password login stays on because `~/.ssh/authorized_keys` was empty. Once a
+key is copied in (`ssh-copy-id kamal@<laptop-ip>` from the other machine), add
+`PasswordAuthentication no` to the drop-in and `sudo systemctl reload sshd`.
+No firewall runs on this laptop, so port 22 is open to the LAN. Tested
+2026-10-31: `sshd` active.
+
+**Undo.** `fixes/ssh/setup-sshd.sh --uninstall`.

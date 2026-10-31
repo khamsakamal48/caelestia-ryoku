@@ -92,7 +92,7 @@ caelestia/            the bar style: Scene.qml, cae/ (vendored), cae-adapters/, 
 hypr/caelestia.lua    keybind block added to user.lua
 patches/              Ryoku patches (Controls window hidden)
 config/caelestia/     starter Caelestia settings
-fixes/                this laptop's Ryoku fixes (clamshell, VNC, conda, Wispr Flow); manual, see fixes/README.md
+fixes/                this laptop's Ryoku fixes (clamshell, VNC, conda, Wispr Flow, SSH); manual, see fixes/README.md
 ```
 
 ## Credits and license
