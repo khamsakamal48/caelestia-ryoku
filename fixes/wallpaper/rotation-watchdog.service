@@ -1,0 +1,9 @@
+# Force a wallpaper swap when ryogami's rotation is on but has stalled.
+# Started every minute by rotation-watchdog.timer.
+[Unit]
+Description=Ryogami wallpaper rotation watchdog
+After=ryogami.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/ryogami-rotation-watchdog

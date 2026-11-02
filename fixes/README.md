@@ -19,7 +19,7 @@ problem, or changed the files a fix hooks into.
 | [rclone sleep](#9-rclone-sleep) | Lid shut, then on open: black screen with only a cursor, or a frozen lock screen | `sleep/rclone-sleep@.service` |
 | [Ryo app windows](#10-ryo-app-windows) | Ryoku Settings opens over the bar; Ryoport's SSH terminal and other Ryo apps open as small floating windows outside the gaps | `hypr/user-blocks.lua` (ryo-apps-tile) |
 | [Clipboard in RDP/VM](#11-clipboard-in-rdpvm) | Ctrl+C in a Windows RDP/VM window needs 2-3 tries; Ctrl+X loses the text | `clipboard/wl-clip-persist` |
-| [Wallpaper auto-rotate](#12-wallpaper-auto-rotate) | Auto-rotate in the wallpaper picker is clicked, but the wallpaper never changes | `wallpaper/restart-rotation.sh` |
+| [Wallpaper auto-rotate](#12-wallpaper-auto-rotate) | Auto-rotate in the wallpaper picker is clicked, but the wallpaper never changes | `wallpaper/restart-rotation.sh`, `wallpaper/rotation-watchdog.{sh,service,timer}` |
 | [Theme stuck on dark](#13-theme-stuck-on-dark) | Shell stays dark in daytime; light mode and the sunrise/sunset Variant do nothing | none (settings only) |
 | [Mirror breaks clamshell](#14-mirror-breaks-clamshell) | Lid shut with HDMI and power: external monitor is black with flickering text at the bottom | none (`ryoku-monitor` only) |
 | [OpenSSH server](#15-openssh-server) | No SSH access to the laptop; the one-line setup fails in fish | `ssh/setup-sshd.sh` |
@@ -378,6 +378,34 @@ or a ryogami restart. Run it again after login if rotation sticks again.
 
 What leaves it stuck is unknown. The manual-pause state below may be the
 cause.
+
+**Watchdog (keeps it rotating).** The restart does not last. From 2026-10-31
+to 11-02 the laptop stayed awake in clamshell for 36 h on a 3590 s interval
+with rotation active, and the wallpaper never changed. ryogami's timer also
+pauses during suspend and starts over whenever the daemon restarts (twice at
+every login), so a long interval may never be reached. The watchdog checks
+once a minute. When **Rotate automatically** is on, rotation is active, and
+`~/.cache/ryogami/outputs.json` has not changed for the interval plus 60 s of
+wall-clock time, it gets ryogami to swap right away. It does this by running
+rotation at 10 s until the wallpaper changes, then restarting it at the
+interval from settings. ryogami still picks the wallpaper, so the sources,
+favourites and weather match settings still apply. Picking a wallpaper by
+hand resets the countdown. Stopping rotation with the picker button keeps the
+watchdog away.
+
+```sh
+install -Dm755 fixes/wallpaper/rotation-watchdog.sh ~/.local/bin/ryogami-rotation-watchdog
+install -Dm644 -t ~/.config/systemd/user fixes/wallpaper/rotation-watchdog.{service,timer}
+systemctl --user daemon-reload && systemctl --user enable --now rotation-watchdog.timer
+```
+
+Check with `journalctl --user -u rotation-watchdog`: a forced swap logs
+"forcing a swap" and then "wallpaper swapped". Tested 2026-11-02: with the
+state file aged past 3590 s, the wallpaper changed 12 s later and rotation
+was back on 3590 s. After a long suspend, expect a swap within a minute of
+waking. Undo: `systemctl --user disable --now rotation-watchdog.timer`, then
+delete the two units, the script and
+`~/.local/state/ryoku/rotation-watchdog.json`.
 
 **Not verified.** Whether rotation started with the button survives a logout
 or a `systemctl --user restart ryogami`, and whether picking a wallpaper by
