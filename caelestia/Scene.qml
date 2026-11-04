@@ -18,6 +18,7 @@ import "cae/modules/dashboard" as Dashboard
 import "cae/modules/session" as Session
 import "cae/modules/launcher" as Launcher
 import "cae/modules/sidebar" as Sidebar
+import "cae/modules/osd" as Osd
 
 // Caelestia's shell frame for Ryoku.
 //
@@ -25,7 +26,8 @@ import "cae/modules/sidebar" as Sidebar
 // ContentWindow + Panels + Interactions + Regions): Caelestia's own bar, bar
 // popouts, dashboard and session menu (vendored under cae/) inside its blob
 // border, laid out and driven the way Caelestia does, plus its launcher,
-// notification sidebar (fed by Ryoku's notification server) and Nexus
+// notification sidebar (fed by Ryoku's notification server), its volume and
+// brightness panel (on hover only) and Nexus
 // settings app. Ryoku's Controls (Super+Escape) is hosted as a
 // centred right-border drawer. Ryoku keeps what it owns: notifications, OSDs,
 // keybinds, wallpaper and theme, and session actions (routed through Ryoku's
@@ -105,6 +107,11 @@ Scope {
                 panel: sessionWrapper
                 x: win.width - width
                 width: panel.width * (1 - session.offsetScale) + win.borderThickness + Math.max(sidebarRegion.width, controlsRegion.width)
+            }
+            PanelRegion {
+                panel: osdWrapper
+                x: win.width - width
+                width: panel.width * (1 - osd.offsetScale) + win.borderThickness + sessionRegion.width
             }
             PanelRegion {
                 id: sidebarRegion
@@ -228,6 +235,15 @@ Scope {
             }
 
             PanelBg {
+                id: osdBg
+
+                panel: osdWrapper
+                deformAmount: 0.25
+                x: osdWrapper.x + osd.x + bar.implicitWidth
+                implicitWidth: osd.width
+            }
+
+            PanelBg {
                 id: sessionBg
 
                 panel: sessionWrapper
@@ -321,6 +337,8 @@ Scope {
                 if (containsMouse)
                     return;
                 win.screenState.dashboard = false;
+                win.screenState.osd = false;
+                osd.hovered = false;
                 if (!trayMenuOpen()) {
                     win.popouts.hasCurrent = false;
                     bar.closeTray();
@@ -339,15 +357,18 @@ Scope {
                 if (win.contentItem.CC.Config.launcher.showOnHover && !win.screenState.launcher && inBottomPanel(launcher, x, y))
                     win.screenState.launcher = true;
 
-                // Right edge: the middle third opens Controls (Super+Escape), the top corner the notification sidebar (Super+G).
-                if (x >= width - Math.max(win.contentItem.CC.Config.border.minThickness, win.borderThickness) - 1) {
-                    if (y < 80 * Tokens.uiScaleFor(root.modelData.name)) {
-                        if (!win.screenState.sidebar && !win.controlsOpen)
-                            win.screenState.sidebar = true;
-                    } else if (y > height / 3 && y < height * 2 / 3 && !win.controlsOpen && !win.screenState.sidebar) {
-                        R.SidebarState.open(root.modelData);
-                    }
-                }
+                // Right edge: the top corner opens the notification sidebar (Super+G); the middle
+                // third opens Caelestia's volume/brightness panel while the pointer stays on it.
+                // Ryoku's Controls opens only from Super+Escape.
+                const atRightEdge = x >= width - Math.max(win.contentItem.CC.Config.border.minThickness, win.borderThickness) - 1;
+                if (atRightEdge && y < 80 * Tokens.uiScaleFor(root.modelData.name) && !win.screenState.sidebar && !win.controlsOpen)
+                    win.screenState.sidebar = true;
+
+                const rightDrawerWidth = Math.max(sidebar.width * (1 - sidebar.offsetScale), controls.width * (1 - controls.offsetScale));
+                const outOfRightDrawer = rightDrawerWidth <= 0 || x < width - rightDrawerWidth;
+                const showOsd = outOfRightDrawer && (inRightPanel(osdWrapper, x, y) || (atRightEdge && y > height / 3 && y < height * 2 / 3));
+                win.screenState.osd = showOsd;
+                osd.hovered = showOsd;
 
                 if (x < bar.implicitWidth) {
                     bar.checkPopout(y);
@@ -369,6 +390,33 @@ Scope {
                 anchors.fill: parent
                 anchors.margins: win.borderThickness
                 anchors.leftMargin: bar.implicitWidth
+
+                // Caelestia's volume/brightness panel, left of the session menu as in Caelestia.
+                Item {
+                    id: osdWrapper
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.right: parent.right
+                    anchors.rightMargin: sessionWrapper.anchors.rightMargin + session.width * (1 - session.offsetScale)
+                    clip: sidebar.visible || controls.visible || session.visible
+
+                    implicitWidth: osd.implicitWidth * (1 - osd.offsetScale)
+                    implicitHeight: osd.implicitHeight
+
+                    Osd.Wrapper {
+                        id: osd
+
+                        screen: root.modelData
+                        screenState: win.screenState
+                        sidebarOrSessionVisible: sidebar.visible || controls.visible || session.visible
+
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.right: parent.right
+                        transform: Matrix4x4 {
+                            matrix: osdBg.deformMatrix
+                        }
+                    }
+                }
 
                 Item {
                     id: sessionWrapper

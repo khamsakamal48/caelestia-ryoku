@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vendor Caelestia's bar, dashboard, session menu, launcher and Nexus into caelestia/cae/.
+"""Vendor Caelestia's bar, dashboard, session menu, launcher, OSD and Nexus into caelestia/cae/.
 
   python3 -I vendor-caelestia.py <caelestia-shell checkout>
 
@@ -25,7 +25,7 @@ OUT = HERE / "caelestia" / "cae"
 ADAPTERS = HERE / "caelestia" / "cae-adapters"
 EXTRAS = HERE / "caelestia" / "cae-extras"
 MODULES = ["modules/dashboard", "modules/bar", "modules/windowinfo", "modules/session",
-           "modules/launcher", "modules/nexus", "modules/sidebar"]
+           "modules/launcher", "modules/nexus", "modules/sidebar", "modules/osd"]
 ADAPTED = {"Colours", "Players", "Weather", "Notifs"}
 # Reached only through code we leave out; nothing shown needs them.
 SKIP = {"Recorder", "Wallpapers"}
@@ -233,6 +233,10 @@ PATCHES = [
      "            value: AiUsage.settings.warnThreshold\n            from: 10\n            to: 100\n            stepSize: 5\n"
      "            onMoved: v => AiUsage.settings.warnThreshold = v\n        }\n\n"
      "        // Behaviour\n"),
+    # Caelestia's volume/brightness panel opens only on hover of the right edge's middle:
+    # Ryoku already shows its own OSD on key presses, so it does not pop on changes.
+    *(("modules/osd/Wrapper.qml", f"root.show();\n            root.{p} =", f"root.{p} =")
+      for p in ("muted", "volume", "sourceMuted", "sourceVolume", "brightness")),
 ]
 # Blocks removed whole: (file, the text that starts it, the text that ends it).
 CUTS = [

@@ -3,6 +3,7 @@ ButtonBase ButtonBase.qml
 CircularIndicator CircularIndicator.qml
 CircularProgress CircularProgress.qml
 CustomMouseArea CustomMouseArea.qml
+FilledSlider FilledSlider.qml
 IconButton IconButton.qml
 IconTextButton IconTextButton.qml
 LoadingIndicator LoadingIndicator.qml
