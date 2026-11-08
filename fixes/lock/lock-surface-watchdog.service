@@ -1,0 +1,13 @@
+[Unit]
+Description=Restart the lock client when it loses its lock surfaces
+PartOf=graphical-session.target
+After=graphical-session.target
+StartLimitIntervalSec=0
+
+[Service]
+ExecStart=%h/.local/bin/lock-surface-watchdog
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

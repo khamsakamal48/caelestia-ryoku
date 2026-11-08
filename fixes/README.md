@@ -23,6 +23,8 @@ problem, or changed the files a fix hooks into.
 | [Theme stuck on dark](#13-theme-stuck-on-dark) | Shell stays dark in daytime; light mode and the sunrise/sunset Variant do nothing | none (settings only) |
 | [Mirror breaks clamshell](#14-mirror-breaks-clamshell) | Lid shut with HDMI and power: external monitor is black with flickering text at the bottom | none (`ryoku-monitor` only) |
 | [OpenSSH server](#15-openssh-server) | No SSH access to the laptop; the one-line setup fails in fish | `ssh/setup-sshd.sh` |
+| [Docked laptop suspends](#16-docked-laptop-suspends) | Lid shut with HDMI and power: works, then goes unreachable about 30 minutes later; black screen on opening the lid | none (`ryoku-power` only) |
+| [Black lock after display sleep](#17-black-lock-after-display-sleep) | Lid shut with HDMI: after the monitor sleeps or switches input while locked, HDMI and VNC are black and ignore clicks | `lock/lock-surface-watchdog.{sh,service}` |
 
 Apply them in this order: fix 1 was the root cause behind most of the rest.
 
@@ -546,3 +548,89 @@ No firewall runs on this laptop, so port 22 is open to the LAN. Tested
 2026-10-31: `sshd` active.
 
 **Undo.** `fixes/ssh/setup-sshd.sh --uninstall`.
+
+## 16. Docked laptop suspends
+
+**Problem.** With HDMI and power connected, closing the lid worked: the panel
+went off and the laptop stayed awake (fix 14 held). About 30 minutes later the
+laptop stopped answering on the network, and opening the lid gave a black
+screen. That suspend did not come from the lid. Ryoku's idle policy suspends
+after 1800 s idle on AC (`ac.suspendSec`), and with the lid shut nothing
+counts as input. On 2026-11-08 the lid closed at 11:23:58 and the idle steps
+fired at the expected times: dim 11:28:56, lock 11:33:56, screens off
+11:34:56, `ryoku-shell suspend` 11:53:56 (`PM: suspend entry (s2idle)`).
+Opening the lid at 12:02:45 woke the laptop to a black screen. The cause of
+the black screen is not known, because the Hyprland log lived in
+`$XDG_RUNTIME_DIR` and was lost when the laptop rebooted.
+
+**Check.** `ryoku-power idle get ac.suspendSec` prints `1800`, and the journal
+shows the idle suspend:
+
+```sh
+journalctl -b -1 | grep -E 'on-ac && ryoku-shell suspend|PM: suspend entry'
+```
+
+**Apply.** Turn off idle suspend on AC (a timeout of 0 skips that stage, see
+`/usr/bin/ryoku-idle`). Battery suspend after 15 minutes stays on. The second
+command renders `hypridle.conf`, because `set` alone does not:
+
+```sh
+ryoku-power idle set ac.suspendSec 0
+ryoku-idle apply
+grep -c 'on-ac && ryoku-shell suspend' ~/.config/ryoku/hypridle.conf   # 0
+```
+
+The same setting is on Ryoku Hub > Machine. On AC the laptop still locks and
+turns its screens off when idle, but it no longer sleeps. It also stays awake
+on AC with the lid open and no monitor connected. Applied 2026-11-08. A lid
+close of more than 30 minutes while docked has not been tested since.
+
+**Undo.** `ryoku-power idle set ac.suspendSec 1800 && ryoku-idle apply`.
+
+## 17. Black lock after display sleep
+
+**Problem.** With the lid shut and HDMI as the only display, the idle timer
+locked the session (20:29 on 2026-11-08). Later the MacBook sharing the
+monitor slept, and the monitor switched inputs, so at 20:53:25 HDMI-A-1 went
+away. That left Hyprland with no output at all (eDP-1 is disabled in
+clamshell). wayvnc exited ("No fallback outputs left") and was restarted.
+The Quickshell lock client logged `There are no outputs - creating placeholder
+screen` and never created a lock surface when HDMI returned. The session
+stayed locked with nothing drawn, so HDMI and VNC were black and clicks did
+nothing. The displays were on (`dpmsStatus: 1`) and `hyprctl layers` showed
+nothing on the overlay layer.
+
+**Check.** While the screen is black and locked:
+
+```sh
+quickshell log --pid "$(pgrep -o -f 'quickshell -p .*/lock_shell.qml')" | grep 'no outputs'
+hyprctl getoption misc:allow_session_lock_restore   # must be true for the fix
+```
+
+**One-off recovery.** Restart only the lock client. `lock.sh` relaunches it,
+and the new client takes over the same lock, so the session never unlocks:
+
+```sh
+pkill -o -f 'quickshell -p .*/lock_shell.qml'
+```
+
+This brought the lock screen back on 2026-11-08.
+
+**Apply.** A watchdog in the style of `wayvnc-watchdog` follows Hyprland
+`monitoradded` events, with a 60 s fallback check. When the lock client is
+running, a real output exists, and the client's log contains the placeholder
+line, it kills the client so `lock.sh` relaunches it. A client started with
+outputs present never logs that line, so the watchdog does not loop.
+
+```sh
+install -Dm755 fixes/lock/lock-surface-watchdog.sh ~/.local/bin/lock-surface-watchdog
+install -Dm644 fixes/lock/lock-surface-watchdog.service ~/.config/systemd/user/lock-surface-watchdog.service
+systemctl --user daemon-reload && systemctl --user enable --now lock-surface-watchdog
+```
+
+Not yet tested end to end. To test: lock, sleep or unplug the monitor
+(nothing else connected), bring it back, and within about 3 s the lock screen
+should appear. `journalctl --user -u lock-surface-watchdog` logs each restart.
+
+**Undo.** `systemctl --user disable --now lock-surface-watchdog`, then remove
+the two installed files.
