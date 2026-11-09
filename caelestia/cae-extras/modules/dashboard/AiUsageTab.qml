@@ -11,7 +11,9 @@ import "../../services"
 import "../../utils"
 
 // Dashboard tab: Claude Code's 5-hour session and weekly plan limits, plus tokens
-// per day for the last 7 days. Data and settings come from the AiUsage service.
+// per day for the last 7 days. With a dario proxy as the source, the limits are
+// the pool's (mean across its accounts), followed by the last hour's traffic and
+// one row per account. Data and settings come from the AiUsage service.
 ColumnLayout {
     id: root
 
@@ -51,7 +53,7 @@ ColumnLayout {
         StyledText {
             id: title
 
-            text: Tr.tr("Claude Code")
+            text: AiUsage.useDario ? Tr.tr("Claude · dario") : Tr.tr("Claude Code")
             font: Tokens.font.title.medium
         }
 
@@ -60,9 +62,9 @@ ColumnLayout {
         }
 
         StyledText {
-            text: !root.usage ? Tr.tr("No data yet") : root.usage.updated_at ? Tr.tr("Updated %1").arg(root.usage.updated_at.slice(0, 5)) + (AiUsage.claudeStale ? ` · ${Tr.tr("last refresh failed")}` : "") : ""
+            text: !root.usage ? (AiUsage.useDario ? AiUsage.darioError || Tr.tr("Connecting…") : Tr.tr("No data yet")) : root.usage.updated_at ? Tr.tr("Updated %1").arg(root.usage.updated_at.slice(0, 5)) + (AiUsage.claudeStale ? ` · ${AiUsage.useDario ? AiUsage.darioError : Tr.tr("last refresh failed")}` : "") : ""
             font: Tokens.font.body.small
-            color: AiUsage.claudeStale ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
+            color: AiUsage.claudeStale || (AiUsage.useDario && !root.usage && AiUsage.darioError) ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
         }
 
         IconButton {
@@ -78,7 +80,7 @@ ColumnLayout {
 
         LimitCard {
             visible: AiUsage.settings.showSession
-            title: Tr.tr("5-hour session")
+            title: AiUsage.useDario ? Tr.tr("5-hour, pool") : Tr.tr("5-hour session")
             icon: "timer"
             value: AiUsage.pct(root.usage?.["5h-utilization"])
             resetTs: parseInt(root.usage?.["5h-reset"]) || 0
@@ -86,7 +88,7 @@ ColumnLayout {
 
         LimitCard {
             visible: AiUsage.settings.showWeekly
-            title: Tr.tr("Weekly limit")
+            title: AiUsage.useDario ? Tr.tr("Weekly, pool") : Tr.tr("Weekly limit")
             icon: "date_range"
             value: AiUsage.pct(root.usage?.["7d-utilization"])
             resetTs: parseInt(root.usage?.["7d-reset"]) || 0
@@ -184,6 +186,250 @@ ColumnLayout {
             text: Tr.tr("Enable AI usage widgets in the dashboard settings")
             font: Tokens.font.body.medium
             color: Colours.palette.m3onSurfaceVariant
+        }
+    }
+
+    // dario: the last hour through the proxy, and what its ledger says the seats absorbed.
+    RowLayout {
+        readonly property var win: AiUsage.darioAnalytics?.window
+        readonly property var pred: AiUsage.darioAnalytics?.predictions
+        readonly property var recent: AiUsage.darioAnalytics?.lifetime?.recent
+
+        visible: AiUsage.useDario && AiUsage.settings.showPoolStats && !!win
+        Layout.fillWidth: true
+        spacing: Tokens.spacing.small
+
+        Stat {
+            icon: "bolt"
+            label: Tr.tr("Last hour")
+            value: Tr.tr("%1 req").arg(parent.win?.requests ?? 0)
+        }
+
+        Stat {
+            icon: "cached"
+            label: Tr.tr("Cache hit")
+            value: `${Math.round(parent.win?.cachedPromptPercent ?? 0)}%`
+        }
+
+        Stat {
+            icon: "local_fire_department"
+            label: Tr.tr("Burn")
+            value: Tr.tr("%1/h").arg(AiUsage.formatCost(parent.pred?.costBurnRate ?? 0))
+        }
+
+        Stat {
+            icon: "hourglass_bottom"
+            label: Tr.tr("Runs out")
+            value: parent.pred?.estimatedExhaustionMinutes == null ? "—" : AiUsage.untilReset(AiUsage.now / 1000 + parent.pred.estimatedExhaustionMinutes * 60) || Tr.tr("now")
+            warn: parent.pred?.estimatedExhaustionMinutes != null && parent.pred.estimatedExhaustionMinutes < 60
+        }
+
+        Stat {
+            visible: !!parent.recent
+            icon: "payments"
+            label: Tr.tr("API value today")
+            value: AiUsage.formatCost(parent.recent?.today ?? 0)
+        }
+
+        Stat {
+            visible: !!parent.recent
+            icon: "calendar_month"
+            label: Tr.tr("7 days")
+            value: AiUsage.formatCost(parent.recent?.last7d ?? 0)
+        }
+    }
+
+    // dario: one row per account in the pool.
+    ColumnLayout {
+        visible: AiUsage.useDario && AiUsage.settings.showAccounts && AiUsage.accounts.length > 0
+        Layout.fillWidth: true
+        spacing: Tokens.spacing.extraSmall
+
+        Repeater {
+            model: AiUsage.accounts
+
+            AccountRow {}
+        }
+    }
+
+    // A figure from dario's analytics: icon, small label, value.
+    component Stat: StyledRect {
+        id: stat
+
+        required property string icon
+        required property string label
+        required property string value
+        property bool warn
+
+        Layout.fillWidth: true
+        color: Colours.tPalette.m3surfaceContainer
+        radius: Tokens.rounding.medium
+        implicitWidth: statLayout.implicitWidth + Tokens.padding.large * 2
+        implicitHeight: statLayout.implicitHeight + Tokens.padding.medium * 2
+
+        ColumnLayout {
+            id: statLayout
+
+            anchors.centerIn: parent
+            spacing: 0
+
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: Tokens.spacing.extraSmall
+
+                MaterialIcon {
+                    text: stat.icon
+                    color: stat.warn ? Colours.palette.m3error : Colours.palette.m3primary
+                }
+
+                StyledText {
+                    text: stat.label
+                    font: Tokens.font.body.small
+                    color: Colours.palette.m3onSurfaceVariant
+                }
+            }
+
+            StyledText {
+                Layout.alignment: Qt.AlignHCenter
+                text: stat.value
+                font: Tokens.font.title.medium
+                color: stat.warn ? Colours.palette.m3error : Colours.palette.m3onSurface
+            }
+        }
+    }
+
+    // One dario account: name, plan, state, 5h and 7d meters, when its window rolls.
+    component AccountRow: StyledRect {
+        id: acc
+
+        required property var modelData
+        readonly property bool parked: modelData.status !== "allowed" && modelData.status !== "allowed_warning"
+        // Each seat's last reply states one reset: the window it was measured against.
+        readonly property string resetIn: modelData.resetAt > 0 ? AiUsage.untilReset(modelData.resetAt / 1000) : ""
+
+        Layout.fillWidth: true
+        color: Colours.tPalette.m3surfaceContainer
+        radius: Tokens.rounding.medium
+        implicitHeight: accLayout.implicitHeight + Tokens.padding.medium * 2
+
+        HoverHandler {
+            id: accHover
+        }
+
+        RowLayout {
+            id: accLayout
+
+            anchors.fill: parent
+            anchors.leftMargin: Tokens.padding.large
+            anchors.rightMargin: Tokens.padding.large
+            spacing: Tokens.spacing.large
+
+            MaterialIcon {
+                text: acc.parked ? "block" : "account_circle"
+                fill: 1
+                color: acc.parked ? Colours.palette.m3error : Colours.palette.m3primary
+                fontStyle: Tokens.font.icon.large
+            }
+
+            ColumnLayout {
+                Layout.preferredWidth: 150
+                spacing: 0
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: acc.modelData.alias
+                    font: Tokens.font.title.small
+                    elide: Text.ElideRight
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: accHover.hovered && acc.modelData.email ? acc.modelData.email : [acc.modelData.tier, acc.parked ? acc.modelData.status : ""].filter(Boolean).join(" · ")
+                    font: Tokens.font.body.small
+                    color: acc.parked ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
+                    elide: Text.ElideRight
+                }
+            }
+
+            Meter {
+                label: Tr.tr("5h")
+                value: acc.modelData.util5h
+            }
+
+            Meter {
+                label: Tr.tr("7d")
+                value: acc.modelData.util7d
+            }
+
+            ColumnLayout {
+                Layout.preferredWidth: 90
+                spacing: 0
+
+                StyledText {
+                    Layout.alignment: Qt.AlignRight
+                    visible: AiUsage.settings.showCountdown
+                    text: !acc.resetIn ? "—" : accHover.hovered ? Qt.formatDateTime(new Date(acc.modelData.resetAt), "ddd hh:mm") : Tr.tr("in %1").arg(acc.resetIn)
+                    font: Tokens.font.body.medium
+                }
+
+                StyledText {
+                    Layout.alignment: Qt.AlignRight
+                    text: Tr.tr("%1 req").arg(acc.modelData.requests)
+                    font: Tokens.font.body.small
+                    color: Colours.palette.m3onSurfaceVariant
+                }
+            }
+        }
+    }
+
+    // A thin horizontal meter with its label and percentage.
+    component Meter: ColumnLayout {
+        id: meter
+
+        required property string label
+        required property real value
+        readonly property color accent: Math.round(value * 100) >= AiUsage.settings.warnThreshold ? Colours.palette.m3error : Colours.palette.m3primary
+
+        Layout.fillWidth: true
+        spacing: Tokens.spacing.extraSmall
+
+        RowLayout {
+            Layout.fillWidth: true
+
+            StyledText {
+                text: meter.label
+                font: Tokens.font.body.small
+                color: Colours.palette.m3onSurfaceVariant
+            }
+
+            Item {
+                Layout.fillWidth: true
+            }
+
+            StyledText {
+                text: Strings.percentOne(meter.value)
+                font: Tokens.font.body.small
+                color: meter.accent
+            }
+        }
+
+        StyledRect {
+            Layout.fillWidth: true
+            implicitWidth: 110
+            implicitHeight: 6
+            radius: Tokens.rounding.full
+            color: Colours.palette.m3secondaryContainer
+
+            StyledRect {
+                width: parent.width * Math.min(1, meter.value)
+                height: parent.height
+                radius: parent.radius
+                color: meter.accent
+
+                Behavior on width {
+                    Anim {}
+                }
+            }
         }
     }
 

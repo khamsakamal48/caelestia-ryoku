@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
 import Caelestia.I18n
+import "../../../../components/controls"
 import "../../../../modules/nexus/common"
 import "../../../../services"
 PageBase {
@@ -86,7 +87,7 @@ PageBase {
         ToggleRow {
             last: true
             text: Tr.tr("AI usage")
-            subtext: Tr.tr("Claude Code plan limits and daily tokens")
+            subtext: Tr.tr("Claude plan limits and daily tokens, locally or through a dario proxy")
             checked: AiUsage.settings.showTab
             onToggled: AiUsage.settings.showTab = checked
         }
@@ -139,8 +140,67 @@ PageBase {
             text: Tr.tr("AI usage")
         }
 
-        ToggleRow {
+        SelectRow {
             first: true
+            label: Tr.tr("Source")
+            subtext: AiUsage.useDario ? Tr.tr("Every account in a dario proxy's pool") : Tr.tr("This machine's Claude Code login")
+            menuItems: [localSource, darioSource]
+            active: AiUsage.useDario ? darioSource : localSource
+            onSelected: item => AiUsage.settings.source = item.value
+
+            MenuItem {
+                id: localSource
+
+                text: Tr.tr("Claude Code")
+                icon: "computer"
+                value: "local"
+            }
+
+            MenuItem {
+                id: darioSource
+
+                text: Tr.tr("dario proxy")
+                icon: "hub"
+                value: "dario"
+            }
+        }
+
+        TextFieldRow {
+            visible: AiUsage.useDario
+            label: Tr.tr("Proxy URL")
+            subtext: AiUsage.darioError ? Tr.tr("Last read: %1").arg(AiUsage.darioError) : Tr.tr("Where dario listens")
+            value: AiUsage.settings.darioUrl
+            placeholderText: "http://localhost:3456"
+            onEditingFinished: v => AiUsage.settings.darioUrl = v.trim()
+        }
+
+        TextFieldRow {
+            visible: AiUsage.useDario
+            label: Tr.tr("Token")
+            subtext: Tr.tr("The proxy's DARIO_API_KEY; empty for an unkeyed proxy")
+            value: AiUsage.settings.darioToken
+            placeholderText: Tr.tr("API key")
+            field.echoMode: TextInput.Password
+            onEditingFinished: v => AiUsage.settings.darioToken = v.trim()
+        }
+
+        ToggleRow {
+            visible: AiUsage.useDario
+            text: Tr.tr("Pool activity")
+            subtext: Tr.tr("Last hour's requests, cache hits, burn rate and API value")
+            checked: AiUsage.settings.showPoolStats
+            onToggled: AiUsage.settings.showPoolStats = checked
+        }
+
+        ToggleRow {
+            visible: AiUsage.useDario
+            text: Tr.tr("Accounts")
+            subtext: Tr.tr("Each account's 5-hour and weekly use; hover for its email")
+            checked: AiUsage.settings.showAccounts
+            onToggled: AiUsage.settings.showAccounts = checked
+        }
+
+        ToggleRow {
             text: Tr.tr("5-hour session")
             subtext: Tr.tr("Usage of the rolling 5-hour limit")
             checked: AiUsage.settings.showSession
