@@ -200,6 +200,31 @@ PageBase {
             onToggled: AiUsage.settings.showAccounts = checked
         }
 
+        SelectRow {
+            visible: AiUsage.useDario && AiUsage.settings.showAccounts
+            label: Tr.tr("Sort accounts")
+            subtext: AiUsage.settings.accountSort === "headroom" ? Tr.tr("Most room left first, by the higher of 5-hour and weekly use") : Tr.tr("A to Z by the name shown")
+            menuItems: [nameSort, headroomSort]
+            active: AiUsage.settings.accountSort === "headroom" ? headroomSort : nameSort
+            onSelected: item => AiUsage.settings.accountSort = item.value
+
+            MenuItem {
+                id: nameSort
+
+                text: Tr.tr("Name")
+                icon: "sort_by_alpha"
+                value: "name"
+            }
+
+            MenuItem {
+                id: headroomSort
+
+                text: Tr.tr("Most headroom")
+                icon: "battery_full"
+                value: "headroom"
+            }
+        }
+
         ToggleRow {
             text: Tr.tr("5-hour session")
             subtext: Tr.tr("Usage of the rolling 5-hour limit")

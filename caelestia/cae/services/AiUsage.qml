@@ -49,8 +49,10 @@ Singleton {
         }))
     readonly property bool hasDarioNames: Object.keys(settingsAdapter.darioNames ?? {}).length > 0
 
-    // One seat per row, A to Z by the name shown (the user's, else the alias):
-    // { alias, name, email, tier, status, action, claim, util5h, util7d, resetAt (ms), requests, ageMs }.
+    // One seat per row, in settings.accountSort order: "name", A to Z by the name
+    // shown (the user's, else the alias), or "headroom", the most room first as
+    // dario reckons it (1 - the higher of 5h and 7d use), parked seats last:
+    // { alias, name, email, tier, status, action, claim, util5h, util7d, headroom, resetAt (ms), requests, ageMs }.
     readonly property var accounts: (darioAccounts?.accounts ?? []).map(a => ({
                 alias: a.alias,
                 name: displayName(a.alias),
@@ -61,13 +63,19 @@ Singleton {
                 claim: a.claim ?? "",
                 util5h: pct(a.util5h),
                 util7d: pct(a.util7d),
+                headroom: 1 - Math.max(pct(a.util5h), pct(a.util7d)),
+                usable: a.status === "allowed" || a.status === "allowed_warning",
                 resetAt: a.resetAt ?? 0,
                 requests: a.requestCount ?? 0,
                 ageMs: a.utilAgeMs
-            })).sort((x, y) => x.name.localeCompare(y.name, undefined, {
+            })).sort((x, y) => {
+            if (settingsAdapter.accountSort === "headroom" && (x.usable !== y.usable || x.headroom !== y.headroom))
+                return x.usable !== y.usable ? (x.usable ? -1 : 1) : y.headroom - x.headroom;
+            return x.name.localeCompare(y.name, undefined, {
                 sensitivity: "base",
                 numeric: true
-            }) || x.alias.localeCompare(y.alias))
+            }) || x.alias.localeCompare(y.alias);
+        })
 
     // Seats that are the same subscription under another alias count once in the pool figures.
     readonly property var distinctAccounts: {
@@ -351,6 +359,8 @@ Singleton {
             property int darioInterval: 60
             // Display names for dario accounts, keyed by dario's alias: { "login": "Ops" }.
             property var darioNames: ({})
+            // Order of the dashboard's account rows: "name" (A to Z) or "headroom" (most room first).
+            property string accountSort: "name"
             // Tab sections only shown for dario.
             property bool showPoolStats: true
             property bool showAccounts: true
