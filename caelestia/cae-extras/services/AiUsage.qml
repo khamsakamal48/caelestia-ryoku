@@ -41,11 +41,16 @@ Singleton {
     // dario's aliases as of the last read. Reassigned only when they change, so the
     // settings page's name fields are not rebuilt (and an edit cut short) on every poll.
     property var darioAliases: []
-    // The aliases the settings page lists: dario's, or with no reading yet, the ones already named.
-    readonly property var nameAliases: darioAliases.length ? darioAliases : Object.keys(settingsAdapter.darioNames ?? {})
+    // The aliases the settings page lists, A to Z: dario's, or with no reading yet, the ones already named.
+    // By alias, not by the name set, so a field stays put while it is renamed.
+    readonly property var nameAliases: (darioAliases.length ? darioAliases.slice() : Object.keys(settingsAdapter.darioNames ?? {})).sort((x, y) => x.localeCompare(y, undefined, {
+            sensitivity: "base",
+            numeric: true
+        }))
     readonly property bool hasDarioNames: Object.keys(settingsAdapter.darioNames ?? {}).length > 0
 
-    // One seat per row: { alias, name, email, tier, status, action, claim, util5h, util7d, resetAt (ms), requests, ageMs }.
+    // One seat per row, A to Z by the name shown (the user's, else the alias):
+    // { alias, name, email, tier, status, action, claim, util5h, util7d, resetAt (ms), requests, ageMs }.
     readonly property var accounts: (darioAccounts?.accounts ?? []).map(a => ({
                 alias: a.alias,
                 name: displayName(a.alias),
@@ -59,7 +64,10 @@ Singleton {
                 resetAt: a.resetAt ?? 0,
                 requests: a.requestCount ?? 0,
                 ageMs: a.utilAgeMs
-            }))
+            })).sort((x, y) => x.name.localeCompare(y.name, undefined, {
+                sensitivity: "base",
+                numeric: true
+            }) || x.alias.localeCompare(y.alias))
 
     // Seats that are the same subscription under another alias count once in the pool figures.
     readonly property var distinctAccounts: {
