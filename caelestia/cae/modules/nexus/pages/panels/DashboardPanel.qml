@@ -246,6 +246,8 @@ PageBase {
             onMoved: v => AiUsage.settings.warnThreshold = v
         }
 
+        DarioAccountNames {}
+
         // Behaviour
         SectionHeader {
             text: Tr.tr("Behaviour")

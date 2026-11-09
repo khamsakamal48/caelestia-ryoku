@@ -337,14 +337,15 @@ ColumnLayout {
 
                 StyledText {
                     Layout.fillWidth: true
-                    text: acc.modelData.alias
+                    text: acc.modelData.name
                     font: Tokens.font.title.small
                     elide: Text.ElideRight
                 }
 
                 StyledText {
                     Layout.fillWidth: true
-                    text: accHover.hovered && acc.modelData.email ? acc.modelData.email : [acc.modelData.tier, acc.parked ? acc.modelData.status : ""].filter(Boolean).join(" · ")
+                    // Hover: dario's alias (when renamed) and the masked email.
+                    text: accHover.hovered ? [acc.modelData.name !== acc.modelData.alias ? acc.modelData.alias : "", acc.modelData.email].filter(Boolean).join(" · ") || acc.modelData.tier : [acc.modelData.tier, acc.parked ? acc.modelData.status : ""].filter(Boolean).join(" · ")
                     font: Tokens.font.body.small
                     color: acc.parked ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
                     elide: Text.ElideRight

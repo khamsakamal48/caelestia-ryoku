@@ -255,6 +255,8 @@ PATCHES = [
      "            subtext: Tr.tr(\"Percent used at which a limit turns red\")\n"
      "            value: AiUsage.settings.warnThreshold\n            from: 10\n            to: 100\n            stepSize: 5\n"
      "            onMoved: v => AiUsage.settings.warnThreshold = v\n        }\n\n"
+     # Display names for a dario pool's accounts (cae-extras/modules/nexus/pages/panels/DarioAccountNames.qml).
+     "        DarioAccountNames {}\n\n"
      "        // Behaviour\n"),
     # Caelestia's volume/brightness panel opens only on hover of the right edge's middle:
     # Ryoku already shows its own OSD on key presses, so it does not pop on changes.

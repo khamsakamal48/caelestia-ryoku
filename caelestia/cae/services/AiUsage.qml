@@ -38,9 +38,17 @@ Singleton {
     property int darioPending: 0
     property int darioGeneration: 0
 
-    // One seat per row: { alias, email, tier, status, action, claim, util5h, util7d, resetAt (ms), requests, ageMs }.
+    // dario's aliases as of the last read. Reassigned only when they change, so the
+    // settings page's name fields are not rebuilt (and an edit cut short) on every poll.
+    property var darioAliases: []
+    // The aliases the settings page lists: dario's, or with no reading yet, the ones already named.
+    readonly property var nameAliases: darioAliases.length ? darioAliases : Object.keys(settingsAdapter.darioNames ?? {})
+    readonly property bool hasDarioNames: Object.keys(settingsAdapter.darioNames ?? {}).length > 0
+
+    // One seat per row: { alias, name, email, tier, status, action, claim, util5h, util7d, resetAt (ms), requests, ageMs }.
     readonly property var accounts: (darioAccounts?.accounts ?? []).map(a => ({
                 alias: a.alias,
+                name: displayName(a.alias),
                 email: a.accountEmail ?? "",
                 tier: tierName(a.seatTier ?? a.rateLimitTier ?? ""),
                 status: a.status ?? "unknown",
@@ -112,6 +120,30 @@ Singleton {
         if (n >= 1e3)
             return `${(n / 1e3).toFixed(1)}k`;
         return String(Math.round(n));
+    }
+
+    // The name shown for a dario account: the user's (Nexus > Dashboard > Account names) or dario's alias.
+    function displayName(alias: string): string {
+        return settingsAdapter.darioNames?.[alias] || alias;
+    }
+
+    // An empty name drops the entry, so the account shows its alias again.
+    function setDarioName(alias: string, name: string): void {
+        const names = Object.assign({}, settingsAdapter.darioNames ?? {});
+        name = name.trim();
+        if (name && name !== alias)
+            names[alias] = name;
+        else
+            delete names[alias];
+        if (JSON.stringify(names) !== JSON.stringify(settingsAdapter.darioNames ?? {}))
+            settingsAdapter.darioNames = names;
+    }
+
+    // Forgets every custom name (including those of accounts dario no longer has)
+    // and reads dario again, so the list is exactly its current aliases.
+    function resetDarioNames(): void {
+        settingsAdapter.darioNames = {};
+        darioReset();
     }
 
     function formatCost(usd: real): string {
@@ -189,6 +221,9 @@ Singleton {
         darioGet("/accounts", gen, (body, err) => {
             root.darioError = err;
             if (body) {
+                const aliases = (body.accounts ?? []).map(a => a.alias);
+                if (aliases.join("\n") !== root.darioAliases.join("\n"))
+                    root.darioAliases = aliases;
                 root.darioAccounts = body;
                 root.darioUpdated = new Date();
             }
@@ -212,6 +247,7 @@ Singleton {
     function darioReset(): void {
         darioGeneration++;
         darioAccounts = darioAnalytics = darioLedger = null;
+        darioAliases = [];
         darioError = "";
         if (useDario)
             darioRefresh();
@@ -305,6 +341,8 @@ Singleton {
             property string darioToken: ""
             // Seconds between reads of the proxy.
             property int darioInterval: 60
+            // Display names for dario accounts, keyed by dario's alias: { "login": "Ops" }.
+            property var darioNames: ({})
             // Tab sections only shown for dario.
             property bool showPoolStats: true
             property bool showAccounts: true
