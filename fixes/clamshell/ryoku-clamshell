@@ -1,15 +1,31 @@
 #!/usr/bin/env bash
+#
 # Ryoku's ryoku-clamshell with one policy change: on AC the laptop stays awake
-# with the lid shut even with no external display (headless use over VNC).
-# Stock policy wants AC *and* an external display; otherwise every close path
-# (the lid bind, `lid sync` on each config reload, the daemon) runs the
-# lock-and-suspend transaction, which re-locks every ~2s after a VNC unlock.
+# with the lid shut whether or not an external display is detected.
+#
+# Stock policy wants AC *and* a "connected" external connector; otherwise every
+# close path (the lid bind, `lid sync` on each Hyprland config reload, and the
+# daemon's udev watch) runs the lock-and-suspend transaction. Two things break
+# that on this laptop:
+#   - headless use over VNC re-locked every ~2s after unlocking (fix 2), and
+#   - the BenQ drops its HDMI hot-plug line when it sleeps with no signal, or
+#     switches input to the MacBook. HDMI-A-1 then reads "disconnected", and the
+#     daemon suspended a docked, lid-shut laptop, making it unreachable over
+#     SSH and VNC (fix 18, 2026-11-09 15:25).
 # On battery, or when AC is unplugged with the lid shut, it still securely
-# locks and suspends. Delete this file and
-# ~/.config/systemd/user/ryoku-clamshell.service.d/ac-awake.conf to undo.
+# locks and suspends.
+#
+# Installed OUTSIDE ~/.local/bin on purpose: `ryoku doctor` (run by
+# `ryoku update`) deletes any ~/.local/bin file that shadows a packaged
+# command, which silently removed the first install of this wrapper. See
+# fixes/clamshell/install.sh and fixes/README.md (fix 18).
 
 # The shipped script only dispatches when executed, not when sourced.
 source /usr/bin/ryoku-clamshell
+
+# Child lid processes re-exec this wrapper, not the stock script.
+CLAMSHELL_BIN="$(readlink -f -- "${BASH_SOURCE[0]}")"
+export RYOKU_CLAMSHELL_BIN="$CLAMSHELL_BIN"
 
 clamshell_wanted() { on_ac; }
 
@@ -22,12 +38,15 @@ disable_internal_panels() { external_connected || return 0; stock_disable_intern
 
 cmd="${1:-daemon}"
 case "$cmd" in
-  daemon|start) run_daemon ;;
+  daemon|start)
+    log "AC-awake policy active (lid shut on AC never suspends; wrapper $CLAMSHELL_BIN)"
+    run_daemon
+    ;;
   stop)         stop_daemon ;;
   session-active) shift; cmd_session_active "$@" ;;
   policy)       shift; cmd_policy "$@" ;;
   lid)          shift; cmd_lid "$@" ;;
-  status)       cmd_status ;;
+  status)       cmd_status; echo "policy=ac-awake" ;;
   is-laptop)    hw_laptop ;;
   -h|--help|help) usage ;;
   *)

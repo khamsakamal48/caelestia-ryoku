@@ -25,6 +25,7 @@ problem, or changed the files a fix hooks into.
 | [OpenSSH server](#15-openssh-server) | No SSH access to the laptop; the one-line setup fails in fish | `ssh/setup-sshd.sh` |
 | [Docked laptop suspends](#16-docked-laptop-suspends) | Lid shut with HDMI and power: works, then goes unreachable about 30 minutes later; black screen on opening the lid | none (`ryoku-power` only) |
 | [Black lock after display sleep](#17-black-lock-after-display-sleep) | Lid shut with HDMI: after the monitor sleeps or switches input while locked, HDMI and VNC are black and ignore clicks | `lock/lock-surface-watchdog.{sh,service}` |
+| [Docked suspend on monitor sleep](#18-docked-suspend-on-monitor-sleep) | Lid shut with HDMI and power: unreachable over SSH/VNC after the screens turn off; on opening the lid the panel is black with only a cursor | `clamshell/install.sh`, `lock/lock-surface-watchdog.sh` |
 
 Apply them in this order: fix 1 was the root cause behind most of the rest.
 
@@ -66,20 +67,21 @@ dispatch. Before applying on a new release, confirm those still exist:
 
 ```sh
 grep -nE '^(clamshell_wanted|disable_internal_panels|on_ac|external_connected|run_daemon|cmd_lid)\(\)' /usr/bin/ryoku-clamshell
-sed -n '/^cmd=/,/^esac/p' /usr/bin/ryoku-clamshell   # compare with the wrapper's case block
+sed -n '/^  case "\$cmd" in/,/^  esac/p' /usr/bin/ryoku-clamshell   # compare with the wrapper's case block
 ```
 
 If they are renamed or the dispatch differs, port the two overrides by hand.
+`install.sh` refuses to run if the overridden functions are gone.
 
-**Apply.**
+**Apply.** See fix 18: the first install (wrapper in `~/.local/bin`) was
+deleted by `ryoku doctor` during the 2026-11-07 update, so the wrapper now
+lives in `~/.local/lib/ryoku-fixes/bin` and `install.sh` wires it up:
 
 ```sh
-install -Dm755 fixes/clamshell/ryoku-clamshell ~/.local/bin/ryoku-clamshell
-install -Dm644 fixes/clamshell/ac-awake.conf ~/.config/systemd/user/ryoku-clamshell.service.d/ac-awake.conf
-systemctl --user daemon-reload && systemctl --user restart ryoku-clamshell
+bash fixes/clamshell/install.sh
 ```
 
-**Undo.** Delete both files, `daemon-reload`, restart the service.
+**Undo.** `bash fixes/clamshell/install.sh --uninstall`.
 
 ## 3. Panel off in clamshell
 
@@ -634,3 +636,87 @@ should appear. `journalctl --user -u lock-surface-watchdog` logs each restart.
 
 **Undo.** `systemctl --user disable --now lock-surface-watchdog`, then remove
 the two installed files.
+
+## 18. Docked suspend on monitor sleep
+
+**Problem.** On 2026-11-09 the laptop was docked (lid shut, HDMI and power
+connected) and locked. Over SSH and VNC it seemed frozen. Opening the lid
+brought SSH back, but the laptop panel was black with only a cursor. The
+laptop had not frozen: it had **suspended**. The timeline, from the journal
+and the Hyprland log:
+
+1. 15:16:59 the idle step turned off the screens (`ryoku-idle output-off`).
+   eDP-1 was already off in clamshell, so HDMI-A-1 now had no signal.
+2. Around 8 minutes later the BenQ went into deep standby and **dropped its
+   HDMI hot-plug line**, so `/sys/class/drm/card1-HDMI-A-1/status` read
+   `disconnected`. The monitor does the same when it switches input to the
+   MacBook (the fix 17 trigger).
+3. 15:25:12 the stock `ryoku-clamshell` daemon re-checked on the DRM udev
+   event, saw "lid shut, no external display", and logged `clamshell condition
+   absent with the lid shut; requesting secure suspend`. `PM: suspend entry
+   (s2idle)` followed.
+4. Hyprland also re-enabled eDP-1 when HDMI dropped, because no output was
+   left. When the lid opened (15:42:10), the lock client had a surface on
+   HDMI but **none on eDP-1**, and logged nothing about it. Hyprland drew
+   eDP-1 as pure black with the cursor on top. Fix 17's watchdog only looked
+   for the "no outputs" log line, so it did nothing.
+
+The Hyprland log showed the same HDMI drop four times in one session. The
+first three lined up with the fix 17 watchdog restarts; this was the first
+time the drop landed while the daemon was evaluating with the lid shut. Fix 2
+would have prevented the suspend, but it was no longer installed: `ryoku
+doctor` (run by `ryoku update`) deletes any file in `~/.local/bin` that
+shadows a packaged command, and the update at 14:39 on 2026-11-07 also
+rewrote `ryoku-clamshell.service` and removed the drop-in.
+
+**Check.**
+
+```sh
+journalctl -b | grep -E 'clamshell condition absent|PM: suspend entry'
+grep -c 'Connector HDMI-A-1 disconnected' "$(ls -t $XDG_RUNTIME_DIR/hypr/*/hyprland.log | head -1)"
+systemctl --user cat ryoku-clamshell | grep ExecStart   # /usr/bin/... = fix 2/18 not active
+```
+
+**Apply.**
+
+1. Clamshell policy (fix 2, made durable):
+
+   ```sh
+   bash fixes/clamshell/install.sh
+   ```
+
+   This installs the wrapper to `~/.local/lib/ryoku-fixes/bin/ryoku-clamshell`
+   (out of `ryoku doctor`'s reach) and the `ac-awake.conf` drop-in for the
+   daemon. It also adds a `clamshell-ac-awake` block to
+   `~/.config/hypr/user.lua` that puts that directory first in Hyprland's
+   PATH, so the lid binds and `lid sync` (run on every config reload) use the
+   same policy. On every Hyprland start or reload the block checks that the
+   wrapper and drop-in still exist, and raises a critical notification if an
+   update removed them. With the fix, a lid shut on AC never suspends, whatever
+   the monitor's hot-plug line says. On battery, or when AC is unplugged with
+   the lid shut, the laptop still locks and suspends.
+
+2. Lock surfaces (fix 17, extended): `lock-surface-watchdog.sh` now also
+   captures each live output with `grim` while locked. An output whose frame
+   is exactly black on two captures 5 s apart has no lock surface (every lock
+   theme draws text), so the watchdog restarts the client. Restarts are limited
+   to one every 120 s, and at most 3 in a row until the next `monitoradded`
+   event. Re-install it as in fix 17:
+
+   ```sh
+   install -Dm755 fixes/lock/lock-surface-watchdog.sh ~/.local/bin/lock-surface-watchdog
+   systemctl --user restart lock-surface-watchdog
+   ```
+
+**Verified 2026-11-09.** After `install.sh`, the daemon runs the wrapper
+(`journalctl --user -u ryoku-clamshell` logs `AC-awake policy active`), and
+`ryoku-clamshell` resolves to the wrapper for processes Hyprland spawns.
+With a fake DRM directory showing HDMI disconnected on AC, the stock policy
+returns "not wanted" (suspend) and the wrapper returns "wanted" (stay awake).
+The new watchdog, started while eDP-1 was black, logged `no lock surface on
+eDP-1; restarting it` within 6 s, and both outputs then showed the lock screen
+with the session still locked. Not yet seen end to end: an overnight docked
+session with the monitor sleeping.
+
+**Undo.** `bash fixes/clamshell/install.sh --uninstall`. For the watchdog,
+re-install the previous `lock-surface-watchdog.sh` from git.
