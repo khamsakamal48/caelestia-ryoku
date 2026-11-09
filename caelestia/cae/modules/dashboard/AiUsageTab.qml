@@ -53,7 +53,7 @@ ColumnLayout {
         StyledText {
             id: title
 
-            text: AiUsage.useDario ? Tr.tr("Claude · dario") : Tr.tr("Claude Code")
+            text: AiUsage.useDario ? Tr.tr("Claude · Proxy") : Tr.tr("Claude Code")
             font: Tokens.font.title.medium
         }
 
