@@ -87,7 +87,7 @@ PageBase {
         ToggleRow {
             last: true
             text: Tr.tr("AI usage")
-            subtext: Tr.tr("Claude plan limits and daily tokens, locally or through a dario proxy")
+            subtext: Tr.tr("Claude plan limits and daily tokens, locally or through a proxy")
             checked: AiUsage.settings.showTab
             onToggled: AiUsage.settings.showTab = checked
         }
@@ -143,7 +143,7 @@ PageBase {
         SelectRow {
             first: true
             label: Tr.tr("Source")
-            subtext: AiUsage.useDario ? Tr.tr("Every account in a dario proxy's pool") : Tr.tr("This machine's Claude Code login")
+            subtext: AiUsage.useDario ? Tr.tr("Every account in the proxy's pool") : Tr.tr("This machine's Claude Code login")
             menuItems: [localSource, darioSource]
             active: AiUsage.useDario ? darioSource : localSource
             onSelected: item => AiUsage.settings.source = item.value
@@ -159,7 +159,7 @@ PageBase {
             MenuItem {
                 id: darioSource
 
-                text: Tr.tr("dario proxy")
+                text: Tr.tr("Proxy")
                 icon: "hub"
                 value: "dario"
             }
@@ -168,7 +168,7 @@ PageBase {
         TextFieldRow {
             visible: AiUsage.useDario
             label: Tr.tr("Proxy URL")
-            subtext: AiUsage.darioError ? Tr.tr("Last read: %1").arg(AiUsage.darioError) : Tr.tr("Where dario listens")
+            subtext: AiUsage.darioError ? Tr.tr("Last read: %1").arg(AiUsage.darioError) : Tr.tr("Where the proxy listens")
             value: AiUsage.settings.darioUrl
             placeholderText: "http://localhost:3456"
             onEditingFinished: v => AiUsage.settings.darioUrl = v.trim()

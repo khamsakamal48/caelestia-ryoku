@@ -194,7 +194,7 @@ Singleton {
                 try {
                     body = JSON.parse(xhr.responseText);
                 } catch (e) {
-                    err = Tr.tr("not a dario reply");
+                    err = Tr.tr("not a proxy reply");
                 }
             } else {
                 err = xhr.status === 0 ? Tr.tr("can't reach %1").arg(root.darioBase) : xhr.status === 401 || xhr.status === 403 ? Tr.tr("token refused (needs the API key)") : xhr.status === 404 ? Tr.tr("not found") : `HTTP ${xhr.status}`;

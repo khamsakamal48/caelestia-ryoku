@@ -208,21 +208,21 @@ PATCHES = [
      "            onToggled: GlobalConfig.dashboard.showWeather = checked\n        }\n",
      "            onToggled: GlobalConfig.dashboard.showWeather = checked\n        }\n\n"
      "        ToggleRow {\n            last: true\n            text: Tr.tr(\"AI usage\")\n"
-     "            subtext: Tr.tr(\"Claude plan limits and daily tokens, locally or through a dario proxy\")\n"
+     "            subtext: Tr.tr(\"Claude plan limits and daily tokens, locally or through a proxy\")\n"
      "            checked: AiUsage.settings.showTab\n            onToggled: AiUsage.settings.showTab = checked\n        }\n"),
     ("modules/nexus/pages/panels/DashboardPanel.qml",
      "        // Behaviour\n",
      "        // AI usage\n        SectionHeader {\n            text: Tr.tr(\"AI usage\")\n        }\n\n"
      # Where the numbers come from: this machine's Claude Code, or a dario proxy's account pool.
      "        SelectRow {\n            first: true\n            label: Tr.tr(\"Source\")\n"
-     "            subtext: AiUsage.useDario ? Tr.tr(\"Every account in a dario proxy's pool\") : Tr.tr(\"This machine's Claude Code login\")\n"
+     "            subtext: AiUsage.useDario ? Tr.tr(\"Every account in the proxy's pool\") : Tr.tr(\"This machine's Claude Code login\")\n"
      "            menuItems: [localSource, darioSource]\n"
      "            active: AiUsage.useDario ? darioSource : localSource\n"
      "            onSelected: item => AiUsage.settings.source = item.value\n\n"
      "            MenuItem {\n                id: localSource\n\n                text: Tr.tr(\"Claude Code\")\n                icon: \"computer\"\n                value: \"local\"\n            }\n\n"
-     "            MenuItem {\n                id: darioSource\n\n                text: Tr.tr(\"dario proxy\")\n                icon: \"hub\"\n                value: \"dario\"\n            }\n        }\n\n"
+     "            MenuItem {\n                id: darioSource\n\n                text: Tr.tr(\"Proxy\")\n                icon: \"hub\"\n                value: \"dario\"\n            }\n        }\n\n"
      "        TextFieldRow {\n            visible: AiUsage.useDario\n            label: Tr.tr(\"Proxy URL\")\n"
-     "            subtext: AiUsage.darioError ? Tr.tr(\"Last read: %1\").arg(AiUsage.darioError) : Tr.tr(\"Where dario listens\")\n"
+     "            subtext: AiUsage.darioError ? Tr.tr(\"Last read: %1\").arg(AiUsage.darioError) : Tr.tr(\"Where the proxy listens\")\n"
      "            value: AiUsage.settings.darioUrl\n            placeholderText: \"http://localhost:3456\"\n"
      "            onEditingFinished: v => AiUsage.settings.darioUrl = v.trim()\n        }\n\n"
      "        TextFieldRow {\n            visible: AiUsage.useDario\n            label: Tr.tr(\"Token\")\n"

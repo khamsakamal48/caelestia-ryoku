@@ -36,7 +36,7 @@ ColumnLayout {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             anchors.margins: Tokens.padding.largeIncreased
-            text: AiUsage.darioError ? Tr.tr("No accounts to list: %1").arg(AiUsage.darioError) : Tr.tr("No accounts read from dario yet")
+            text: AiUsage.darioError ? Tr.tr("No accounts to list: %1").arg(AiUsage.darioError) : Tr.tr("No accounts read from the proxy yet")
             font: Tokens.font.body.small
             color: Colours.palette.m3outline
             wrapMode: Text.Wrap
@@ -54,7 +54,7 @@ ColumnLayout {
             first: index === 0
             label: modelData
             // Plan and masked email tell two seats apart; an alias dario no longer reports says so.
-            subtext: account ? [account.tier, account.email].filter(Boolean).join(" · ") : Tr.tr("Not in dario's pool right now")
+            subtext: account ? [account.tier, account.email].filter(Boolean).join(" · ") : Tr.tr("Not in the proxy's pool right now")
             value: AiUsage.settings.darioNames?.[modelData] ?? ""
             placeholderText: modelData
             onEditingFinished: v => AiUsage.setDarioName(modelData, v)
@@ -66,7 +66,7 @@ ColumnLayout {
         last: true
         icon: "restart_alt"
         text: Tr.tr("Reset names")
-        subtext: Tr.tr("Forget every custom name and list dario's current aliases again")
+        subtext: Tr.tr("Forget every custom name and list the proxy's current aliases again")
         disabled: !AiUsage.hasDarioNames
         onClicked: AiUsage.resetDarioNames()
     }
