@@ -51,8 +51,12 @@ Singleton {
 
     // One seat per row, in settings.accountSort order: "name", A to Z by the name
     // shown (the user's, else the alias), or "headroom", the most room first as
-    // dario reckons it (1 - the higher of 5h and 7d use), parked seats last:
-    // { alias, name, email, tier, status, action, claim, util5h, util7d, headroom, resetAt (ms), requests, ageMs }.
+    // dario reckons it (1 - the higher of 5h and 7d use), then seats with no
+    // reading yet, then parked ones:
+    // { alias, name, email, tier, status, action, claim, observed, parked, util5h, util7d, headroom, resetAt (ms), requests, ageMs }.
+    // dario learns a seat's use only from the rate-limit headers of a reply that
+    // seat served, so one that has served nothing since dario started reads
+    // status "unknown" with no lastObservedAt: not blocked, just unmeasured.
     readonly property var accounts: (darioAccounts?.accounts ?? []).map(a => ({
                 alias: a.alias,
                 name: displayName(a.alias),
@@ -64,13 +68,20 @@ Singleton {
                 util5h: pct(a.util5h),
                 util7d: pct(a.util7d),
                 headroom: 1 - Math.max(pct(a.util5h), pct(a.util7d)),
-                usable: a.status === "allowed" || a.status === "allowed_warning",
+                observed: a.lastObservedAt != null,
+                // Off the pool until a window rolls or a re-login: dario's own next step says so.
+                parked: a.status === "rejected" || a.status === "auth-cooldown" || (a.action ?? "none") !== "none",
                 resetAt: a.resetAt ?? 0,
                 requests: a.requestCount ?? 0,
                 ageMs: a.utilAgeMs
             })).sort((x, y) => {
-            if (settingsAdapter.accountSort === "headroom" && (x.usable !== y.usable || x.headroom !== y.headroom))
-                return x.usable !== y.usable ? (x.usable ? -1 : 1) : y.headroom - x.headroom;
+            if (settingsAdapter.accountSort === "headroom") {
+                const rank = a => a.parked ? 2 : a.observed ? 0 : 1;
+                if (rank(x) !== rank(y))
+                    return rank(x) - rank(y);
+                if (rank(x) === 0 && x.headroom !== y.headroom)
+                    return y.headroom - x.headroom;
+            }
             return x.name.localeCompare(y.name, undefined, {
                 sensitivity: "base",
                 numeric: true
@@ -88,15 +99,19 @@ Singleton {
         });
     }
 
+    // Distinct accounts with a reading; the pool figures are theirs alone, as a
+    // seat that has served nothing yet has no use to count (it is not at 0%).
+    readonly property var observedAccounts: distinctAccounts.filter(a => a.lastObservedAt != null)
+
     // What the tab and tile read, the same shape for both sources: the local
     // cache as is, or the dario pool folded into it (each limit as the mean use
-    // across distinct accounts, i.e. how much of the pool's room is spent).
+    // across distinct accounts with a reading).
     readonly property var claude: useDario ? darioView : local
     readonly property bool claudeStale: useDario ? darioError !== "" && darioAccounts !== null : local?._source === "stale"
     readonly property var darioView: {
         if (!darioAccounts)
             return null;
-        const accs = distinctAccounts;
+        const accs = observedAccounts;
         const mean = key => accs.length ? accs.reduce((s, a) => s + pct(a[key]), 0) / accs.length : 0;
         // Each seat states one reset: the window its last reply was measured against.
         const soonest = prefix => {

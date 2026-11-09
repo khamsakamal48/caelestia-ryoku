@@ -62,7 +62,7 @@ ColumnLayout {
         }
 
         StyledText {
-            text: !root.usage ? (AiUsage.useDario ? AiUsage.darioError || Tr.tr("Connecting…") : Tr.tr("No data yet")) : root.usage.updated_at ? Tr.tr("Updated %1").arg(root.usage.updated_at.slice(0, 5)) + (AiUsage.claudeStale ? ` · ${AiUsage.useDario ? AiUsage.darioError : Tr.tr("last refresh failed")}` : "") : ""
+            text: !root.usage ? (AiUsage.useDario ? AiUsage.darioError || Tr.tr("Connecting…") : Tr.tr("No data yet")) : root.usage.updated_at ? Tr.tr("Updated %1").arg(root.usage.updated_at.slice(0, 5)) + (AiUsage.useDario && AiUsage.observedAccounts.length < AiUsage.distinctAccounts.length ? ` · ${Tr.tr("pool from %1 of %2 accounts").arg(AiUsage.observedAccounts.length).arg(AiUsage.distinctAccounts.length)}` : "") + (AiUsage.claudeStale ? ` · ${AiUsage.useDario ? AiUsage.darioError : Tr.tr("last refresh failed")}` : "") : ""
             font: Tokens.font.body.small
             color: AiUsage.claudeStale || (AiUsage.useDario && !root.usage && AiUsage.darioError) ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
         }
@@ -241,6 +241,18 @@ ColumnLayout {
 
     // dario: one row per account in the pool.
     ColumnLayout {
+        id: accountList
+
+        // Wide enough for the longest name shown (within reason), the same in every
+        // row so the meters line up; the meters give up the room, and the panel
+        // only widens when they cannot.
+        readonly property real nameWidth: {
+            let w = 0;
+            for (let i = 0; i < children.length; i++)
+                w = Math.max(w, children[i].nameImplicitWidth ?? 0);
+            return Math.ceil(Math.min(300, Math.max(120, w)));
+        }
+
         visible: AiUsage.useDario && AiUsage.settings.showAccounts && AiUsage.accounts.length > 0
         Layout.fillWidth: true
         spacing: Tokens.spacing.extraSmall
@@ -248,7 +260,9 @@ ColumnLayout {
         Repeater {
             model: AiUsage.accounts
 
-            AccountRow {}
+            AccountRow {
+                nameWidth: accountList.nameWidth
+            }
         }
     }
 
@@ -303,7 +317,11 @@ ColumnLayout {
         id: acc
 
         required property var modelData
-        readonly property bool parked: modelData.status !== "allowed" && modelData.status !== "allowed_warning"
+        property real nameWidth: 150
+        readonly property real nameImplicitWidth: nameText.implicitWidth
+        readonly property bool parked: modelData.parked
+        // dario has had no reply from this seat since it started, so it has no use to show.
+        readonly property bool unread: !modelData.observed && !parked
         // Each seat's last reply states one reset: the window it was measured against.
         readonly property string resetIn: modelData.resetAt > 0 ? AiUsage.untilReset(modelData.resetAt / 1000) : ""
 
@@ -325,17 +343,19 @@ ColumnLayout {
             spacing: Tokens.spacing.large
 
             MaterialIcon {
-                text: acc.parked ? "block" : "account_circle"
-                fill: 1
-                color: acc.parked ? Colours.palette.m3error : Colours.palette.m3primary
+                text: acc.parked ? "block" : acc.unread ? "hourglass_empty" : "account_circle"
+                fill: acc.unread ? 0 : 1
+                color: acc.parked ? Colours.palette.m3error : acc.unread ? Colours.palette.m3outline : Colours.palette.m3primary
                 fontStyle: Tokens.font.icon.large
             }
 
             ColumnLayout {
-                Layout.preferredWidth: 150
+                Layout.preferredWidth: acc.nameWidth
                 spacing: 0
 
                 StyledText {
+                    id: nameText
+
                     Layout.fillWidth: true
                     text: acc.modelData.name
                     font: Tokens.font.title.small
@@ -345,7 +365,7 @@ ColumnLayout {
                 StyledText {
                     Layout.fillWidth: true
                     // Hover: dario's alias (when renamed) and the masked email.
-                    text: accHover.hovered ? [acc.modelData.name !== acc.modelData.alias ? acc.modelData.alias : "", acc.modelData.email].filter(Boolean).join(" · ") || acc.modelData.tier : [acc.modelData.tier, acc.parked ? acc.modelData.status : ""].filter(Boolean).join(" · ")
+                    text: accHover.hovered ? [acc.modelData.name !== acc.modelData.alias ? acc.modelData.alias : "", acc.modelData.email].filter(Boolean).join(" · ") || acc.modelData.tier : [acc.modelData.tier, acc.parked ? acc.modelData.status : acc.unread ? Tr.tr("no reading yet") : ""].filter(Boolean).join(" · ")
                     font: Tokens.font.body.small
                     color: acc.parked ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
                     elide: Text.ElideRight
@@ -355,11 +375,13 @@ ColumnLayout {
             Meter {
                 label: Tr.tr("5h")
                 value: acc.modelData.util5h
+                known: !acc.unread
             }
 
             Meter {
                 label: Tr.tr("7d")
                 value: acc.modelData.util7d
+                known: !acc.unread
             }
 
             ColumnLayout {
@@ -389,6 +411,8 @@ ColumnLayout {
 
         required property string label
         required property real value
+        // False for a seat dario has not measured: a dash and an empty track, not 0%.
+        property bool known: true
         readonly property color accent: Math.round(value * 100) >= AiUsage.settings.warnThreshold ? Colours.palette.m3error : Colours.palette.m3primary
 
         Layout.fillWidth: true
@@ -408,9 +432,9 @@ ColumnLayout {
             }
 
             StyledText {
-                text: Strings.percentOne(meter.value)
+                text: meter.known ? Strings.percentOne(meter.value) : "—"
                 font: Tokens.font.body.small
-                color: meter.accent
+                color: meter.known ? meter.accent : Colours.palette.m3outline
             }
         }
 
@@ -422,7 +446,7 @@ ColumnLayout {
             color: Colours.palette.m3secondaryContainer
 
             StyledRect {
-                width: parent.width * Math.min(1, meter.value)
+                width: meter.known ? parent.width * Math.min(1, meter.value) : 0
                 height: parent.height
                 radius: parent.radius
                 color: meter.accent
