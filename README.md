@@ -48,7 +48,7 @@ It asks for your sudo password once. Re-running it is safe: use it to update, or
 - **Launcher**: Caelestia's launcher with apps, calculator and actions. Wallpaper, scheme and variant pickers are removed (Ryoku owns those); session actions go through Ryoku; "Settings" opens Nexus.
 - **Controls**: Ryoku's own Controls content (unchanged), hosted as a Caelestia drawer: centred on the right border, rounded and melting out of it like the dashboard. Opens on `SUPER + Escape`; Escape or a click outside closes it, and it swaps with the notification sidebar.
 - **Session menu**: logout/shutdown/reboot go through Ryoku's session daemon; hibernate stays Caelestia's.
-- **Notification sidebar**: mirrors Ryoku's notification server (no second server); Do Not Disturb is Ryoku's. Popups are drawn by Caelestia (`NotifPopups.qml`, wallpaper-driven colours) from Ryoku's popup list; `patches/Config.patch` stops Ryoku drawing its own.
+- **Notification sidebar**: mirrors Ryoku's notification server (no second server); Do Not Disturb is Ryoku's. Popups are drawn by Caelestia (`NotifPopups.qml`, wallpaper-driven colours) from Ryoku's popup list; Ryoku itself stops drawing its own banners and OSD while the `caelestia` style is active.
 - **Nexus settings**: trimmed of pages that do nothing on Ryoku (wallpaper & style, updates/plugins placeholders, utilities panel, weather location, colour engine, popup/toast settings). Its audio/bluetooth/network buttons open Ryoku's panels.
 - **Adapters**: Caelestia's Colours follow Ryoku's live palette, Weather uses Ryoku's weather daemon, Players use MPRIS.
 - **Hyprland**: Caelestia no longer injects Caps/Num Lock keybinds into Hyprland at runtime (it polls device state instead); Ryoku owns keybinds.
@@ -70,6 +70,7 @@ This restores your previous bar style and hands `BarProducts.qml` back to Ryoku.
 - **Bar fell back to Ryoku's default** after a Ryoku or Qt update: re-run `./install.sh` (add `--rebuild` to force a plugin rebuild).
 - **`ryoku doctor` flags `BarProducts.qml`** after a Ryoku update: expected; re-run `./install.sh` to regenerate the fork from the new shipped file.
 
+- **Shell keybinds do nothing after a Ryoku update** (Super+V clipboard, Super+K cheatsheet, launcher, Game Bar) and `qs log -c shell` repeats `Property 'styleOwns' of object Config is not a function`: a stale `user_edits` fork of `services/Config.qml` from an older install is shadowing Ryoku's. Re-run `./install.sh` (it resets that retired fork), or `ryoku reset quickshell/shell/services/Config.qml -y && ryoku-shell reload`. In general, `diff -r /usr/share/ryoku/config/quickshell ~/.config/ryoku/user_edits/quickshell` shows which forks lag the shipped files.
 - **Controls show twice** (Ryoku's own panel plus Caelestia's): `patches/Sidebar.patch` no longer applies to this Ryoku version; Ryoku changed `Sidebar.qml`, so the patch needs re-porting.
 - **Right/bottom edge of a window goes transparent**: capture `hyprctl clients -j | jq -c '.[]|select(.focusHistoryID==0)|[.class,.at,.size]'` and `hyprctl monitors -j | jq -c '.[0].reserved'` while it is happening. A tile of 80,30 1810x1020 with reserved `[60,10,10,10]` means the app did not redraw after a resize (the client's fault, not the frame).
 

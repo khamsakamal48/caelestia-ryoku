@@ -105,6 +105,14 @@ for f in MenuQuickSettings QsTabRail QsTip; do
     rel=quickshell/shell/modules/bar/framebars/menus/$f.qml
     [[ -e $EDITS/$rel ]] && { ryoku reset "$rel" -y || warn "could not reset the old $f fork"; }
 done
+# Forks of patches this repo has retired. A user_edits fork is a full-file
+# snapshot that shadows the shipped file, so one left behind breaks the shell
+# once Ryoku moves on: a stale Config.qml fork lacked Config.styleOwns(), and
+# every shell keybind (Super+V clipboard, Super+K cheatsheet, ...) threw. Ryoku
+# now hides its own banners and OSD for the caelestia style by itself.
+for rel in quickshell/shell/services/Config.qml; do
+    [[ -e $EDITS/$rel ]] && { ryoku reset "$rel" -y || warn "could not reset the retired $rel fork"; }
+done
 for p in "$HERE"/patches/*.patch; do
     rel=$(sed -n 's|^--- a/||p' "$p" | head -1)
     dest=$EDITS/$rel
@@ -116,7 +124,7 @@ for p in "$HERE"/patches/*.patch; do
         rm -f "$dest.new" "$dest.new.orig" "$dest.new.rej"
         # A stale fork would shadow the newer shipped file.
         [[ -e $dest ]] && ryoku reset "$rel" -y
-        warn "$(basename "$p") no longer applies to this Ryoku version; Controls will show twice (Ryoku's own and Caelestia's)"
+        warn "$(basename "$p") no longer applies to this Ryoku version and needs re-porting; Ryoku's unpatched $rel is in use"
     fi
 done
 
@@ -149,6 +157,7 @@ cat <<'EOF'
   SUPER + G              notification sidebar
   SUPER + I              Nexus (Caelestia settings)
   SUPER + Escape         Ryoku Controls (centred, right border)
-If the bar ever falls back to Ryoku's default after an update, re-run ./install.sh.
+Re-run ./install.sh after every Ryoku update: its user_edits forks are snapshots
+of Ryoku files and go stale (bar falls back, or shell keybinds stop working).
 Blurry Slack / Wispr Flow tray icons? Run fixes/tray-icons/apply.sh (asks first).
 EOF
