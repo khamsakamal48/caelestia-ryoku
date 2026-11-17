@@ -720,3 +720,27 @@ session with the monitor sleeping.
 
 **Undo.** `bash fixes/clamshell/install.sh --uninstall`. For the watchdog,
 re-install the previous `lock-surface-watchdog.sh` from git.
+
+## 19. Lid suspends on the login screen
+
+**Problem.** Fix 18 only applies inside a session: the `ryoku-clamshell`
+daemon holds logind's `handle-lid-switch` inhibitor and applies the AC-awake
+policy. On the login screen, after logout, and during boot there is no daemon,
+so logind decides alone. Ryoku's `/etc/systemd/logind.conf.d/10-ryoku-lid.conf`
+sets `HandleLidSwitchExternalPower=suspend`, so shutting the lid on AC there
+suspends the laptop.
+
+**Check.** `systemd-analyze cat-config systemd/logind.conf | grep LidSwitchExternalPower`.
+The last value listed wins; `suspend` means the bug is still there.
+
+**Apply.** `bash fixes/clamshell/install.sh` (asks for sudo). It installs
+`clamshell/logind-ac-awake.conf` as
+`/etc/systemd/logind.conf.d/20-ryoku-fixes-lid-ac.conf`, which sorts after
+Ryoku's file and sets `HandleLidSwitchExternalPower=ignore`, then sends logind
+`SIGHUP` to reload its config without ending sessions. On battery, logind still
+suspends on lid close. Inside a session nothing changes, because the
+inhibitor still overrides logind. The file is not owned by any package, so
+`ryoku update` leaves it alone.
+
+**Undo.** `bash fixes/clamshell/install.sh --uninstall` removes it with the
+rest of the clamshell fix.

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# install.sh -- install the AC-awake ryoku-clamshell wrapper (fixes 2 + 18).
+# install.sh -- install the AC-awake ryoku-clamshell wrapper (fixes 2 + 18)
+# and the logind drop-in that keeps the login screen awake on AC (fix 19).
 #
 # Three places call ryoku-clamshell, and all three must get the wrapper:
 #   1. the ryoku-clamshell.service daemon   -> systemd drop-in (ExecStart)
@@ -27,6 +28,7 @@ WRAPPER="$BIN_DIR/ryoku-clamshell"
 DROPIN_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/ryoku-clamshell.service.d"
 DROPIN="$DROPIN_DIR/ac-awake.conf"
 USER_LUA="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/user.lua"
+LOGIND_DROPIN=/etc/systemd/logind.conf.d/20-ryoku-fixes-lid-ac.conf
 BEGIN='-- >>> clamshell-ac-awake >>>'
 END='-- <<< clamshell-ac-awake <<<'
 
@@ -86,6 +88,26 @@ write_user_lua() {  # <with-block: 0|1>
   mv -- "$tmp" "$USER_LUA"
 }
 
+# Fix 19: logind's own policy for the login screen, logout and boot. Needs root;
+# skipped when the installed copy is already current. HUP makes logind re-read
+# its config without ending sessions.
+install_logind() {
+  if cmp -s -- "$HERE/logind-ac-awake.conf" "$LOGIND_DROPIN"; then
+    say "logind drop-in already current"
+    return
+  fi
+  sudo install -Dm644 -- "$HERE/logind-ac-awake.conf" "$LOGIND_DROPIN"
+  sudo systemctl kill -s HUP systemd-logind
+  say "installed $LOGIND_DROPIN; logind reloaded"
+}
+
+uninstall_logind() {
+  [[ -e $LOGIND_DROPIN ]] || return 0
+  sudo rm -f -- "$LOGIND_DROPIN"
+  sudo systemctl kill -s HUP systemd-logind
+  say "removed $LOGIND_DROPIN; logind reloaded"
+}
+
 reload() {
   systemctl --user daemon-reload
   systemctl --user restart ryoku-clamshell.service
@@ -107,15 +129,17 @@ case "${1:-}" in
     rm -f -- "$HOME/.local/bin/ryoku-clamshell"
     write_user_lua 1
     reload
-    say "installed: $WRAPPER, $DROPIN, user.lua block"
+    install_logind
+    say "installed: $WRAPPER, $DROPIN, user.lua block, $LOGIND_DROPIN"
     ;;
   --uninstall)
     rm -f -- "$WRAPPER" "$DROPIN"
     rmdir -- "$DROPIN_DIR" "$BIN_DIR" 2>/dev/null || true
     [[ -f $USER_LUA ]] && grep -Fxq -- "$BEGIN" "$USER_LUA" && write_user_lua 0
     reload
+    uninstall_logind
     say "removed; stock ryoku-clamshell policy is back"
     ;;
-  -h|--help) sed -n '2,21p' "$0" ;;
+  -h|--help) sed -n '2,22p' "$0" ;;
   *) die "unknown option: $1" ;;
 esac
