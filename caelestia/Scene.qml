@@ -37,7 +37,10 @@ Scope {
 
     property var modelData
 
-    readonly property bool fullscreen: Wm.outputHasFullscreen(root.modelData ? root.modelData.name : "")
+    // Only true fullscreen (Hyprland state 2 or 3) hides the frame. Wm's
+    // workspace flag also counts maximized windows (Super+D), which would drop
+    // the bar and borders and leave their reserved space empty.
+    readonly property bool fullscreen: Cae.Hypr.monitorFor(root.modelData)?.activeWorkspace?.toplevels.values.some(t => (t.lastIpcObject?.fullscreen ?? 0) > 1) ?? false
 
     // Edge reservations, as Caelestia's drawers/Exclusions: the bar's zone on
     // the left, the border thickness elsewhere.
